@@ -1,44 +1,62 @@
 /**
- * MoTA SETU - Unified Frontend Interactive Logic & API Engine (Prototype 2)
- * Pure vanilla JavaScript - 100% standard DOM APIs (no jQuery/pseudo-selectors)
- * Rollout Circular AI Sahayak, Interactive Document Canvas, Real Filters & Audits.
+ * MoTA SETU - Ministry of Tribal Affairs (SIH26239)
+ * Full Interactive Engine & Client-Side Controller
+ * Version 2.2.0 - 100% Interactive Prototype 2
  */
 
 // ==========================================
-// 1. Core DOM & Voice Utilities
+// 1. Core Utilities (Voice, Toast, Files)
 // ==========================================
 
-let isVoiceMuted = false;
+let sahayakVoiceEnabled = true;
 
 function speakText(text, lang = "hi-IN") {
-    if (isVoiceMuted || !('speechSynthesis' in window)) return;
+    if (!sahayakVoiceEnabled || !('speechSynthesis' in window)) return;
     try {
         window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
+        const cleanText = text.replace(/<[^>]*>/g, '').replace(/[#*_]/g, '');
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
         utterance.lang = lang;
-        utterance.rate = 0.95;
         window.speechSynthesis.speak(utterance);
     } catch (e) {
-        console.warn('Speech synthesis error:', e);
+        console.warn('Speech synthesis unavailable:', e);
     }
 }
 
 function showToast(message, icon = 'info', duration = 3500) {
-    let toast = document.getElementById('mota-global-toast');
-    if (!toast) {
-        toast = document.createElement('div');
-        toast.id = 'mota-global-toast';
-        toast.className = 'fixed bottom-24 left-1/2 -translate-x-1/2 bg-primary text-on-primary px-5 py-2.5 rounded-full text-xs font-bold shadow-2xl z-[9999] flex items-center gap-2 border border-secondary-container/30 transition-all duration-300 opacity-0 pointer-events-none transform translate-y-2';
-        document.body.appendChild(toast);
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'fixed top-5 right-5 z-[9999] flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4';
+        document.body.appendChild(container);
     }
-    toast.innerHTML = `<span class="material-symbols-outlined text-[18px] text-secondary-container">${icon}</span><span>${message}</span>`;
-    toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-2');
+
+    const toast = document.createElement('div');
+    toast.className = 'flex items-center gap-3 p-3.5 bg-surface-container-lowest border border-outline-variant/60 rounded-2xl shadow-2xl text-on-surface text-xs pointer-events-auto transform transition-all duration-300 translate-y-[-20px] opacity-0';
+    toast.innerHTML = `
+        <div class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <span class="material-symbols-outlined text-[18px]">${icon}</span>
+        </div>
+        <div class="flex-1 font-medium leading-relaxed">${message}</div>
+        <button onclick="this.parentElement.remove()" class="text-on-surface-variant hover:text-on-surface p-1">
+            <span class="material-symbols-outlined text-[16px]">close</span>
+        </button>
+    `;
+
+    container.appendChild(toast);
+    requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-[-20px]', 'opacity-0');
+    });
+
     setTimeout(() => {
-        toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-2');
+        toast.classList.add('opacity-0', 'translate-y-[-10px]');
+        setTimeout(() => toast.remove(), 300);
     }, duration);
 }
 
-// Download Helper for Client-Side Dossiers & Certificates
 function downloadFile(filename, content, mimeType = 'text/plain') {
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
@@ -47,939 +65,844 @@ function downloadFile(filename, content, mimeType = 'text/plain') {
     a.download = filename;
     document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }, 100);
 }
 
-// Standard DOM Search Helper
 function getElements(selector, textMatch = null) {
-    const els = Array.from(document.querySelectorAll(selector));
-    if (!textMatch) return els;
-    const matchLower = textMatch.toLowerCase();
-    return els.filter(el => (el.textContent || el.innerText || '').toLowerCase().includes(matchLower));
+    const list = Array.from(document.querySelectorAll(selector));
+    if (!textMatch) return list;
+    const lower = textMatch.toLowerCase();
+    return list.filter(el => (el.textContent || '').toLowerCase().includes(lower));
 }
 
 function getElement(selector, textMatch = null) {
-    const list = getElements(selector, textMatch);
-    return list.length > 0 ? list[0] : null;
+    const els = getElements(selector, textMatch);
+    return els.length > 0 ? els[0] : null;
 }
 
 // ==========================================
-// 2. Rollout Circular AI Sahayak Component
+// 2. Rollout AI Sahayak Drawer & Chat Controller
 // ==========================================
 
-function initRolloutSahayak() {
-    // Clean up any old static aside elements
-    document.querySelectorAll('aside.fixed.bottom-8.right-8, aside.fixed.bottom-6.right-6').forEach(el => el.remove());
-
-    let sahayakRoot = document.getElementById('mota-sahayak-widget-root');
-    if (!sahayakRoot) {
-        sahayakRoot = document.createElement('div');
-        sahayakRoot.id = 'mota-sahayak-widget-root';
-        sahayakRoot.className = 'fixed bottom-6 right-6 z-50 flex flex-col items-end select-none';
-        document.body.appendChild(sahayakRoot);
+function toggleSahayakDrawer() {
+    const drawer = document.getElementById('sahayak-drawer');
+    if (!drawer) return;
+    drawer.classList.toggle('hidden');
+    if (!drawer.classList.contains('hidden')) {
+        const input = document.getElementById('sahayak-input');
+        if (input) input.focus();
     }
+}
 
-    sahayakRoot.innerHTML = `
-        <!-- Floating Chat Drawer -->
-        <div id="sahayak-drawer" class="hidden mb-3 w-96 max-w-[calc(100vw-2rem)] h-[520px] max-h-[80vh] bg-surface-container-lowest border border-outline-variant/40 rounded-3xl shadow-2xl flex-col overflow-hidden transition-all duration-300 transform scale-95 opacity-0">
-            <!-- Header -->
-            <div class="bg-primary text-on-primary p-3.5 flex items-center justify-between border-b border-primary-container">
-                <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center border border-secondary-container/40">
-                        <span class="material-symbols-outlined text-secondary-container text-[18px]">smart_toy</span>
-                    </div>
-                    <div>
-                        <div class="flex items-center gap-1.5">
-                            <span class="font-headline font-bold text-xs text-on-primary">AI Sahayak (सहायक)</span>
-                            <span class="w-2 h-2 rounded-full bg-secondary-container animate-pulse"></span>
-                        </div>
-                        <span class="text-[10px] text-on-primary-container block">Autonomous Tribal Welfare Guide</span>
-                    </div>
-                </div>
-                <div class="flex items-center gap-1">
-                    <button id="sahayak-voice-toggle" title="Toggle Voice Assistance" class="p-1.5 rounded-lg hover:bg-primary-container text-on-primary transition">
-                        <span class="material-symbols-outlined text-[18px]">volume_up</span>
-                    </button>
-                    <button id="sahayak-close-btn" title="Close Sahayak" class="p-1.5 rounded-lg hover:bg-primary-container text-on-primary transition">
-                        <span class="material-symbols-outlined text-[18px]">close</span>
-                    </button>
-                </div>
-            </div>
+function toggleSahayakSpeech() {
+    sahayakVoiceEnabled = !sahayakVoiceEnabled;
+    const btn = document.getElementById('sahayak-tts-btn');
+    if (btn) {
+        btn.innerHTML = `<span class="material-symbols-outlined text-[20px]">${sahayakVoiceEnabled ? 'volume_up' : 'volume_off'}</span>`;
+    }
+    showToast(sahayakVoiceEnabled ? 'Voice assistance enabled (Hindi & English)' : 'Voice assistance muted', sahayakVoiceEnabled ? 'volume_up' : 'volume_off');
+}
 
-            <!-- Message Feed -->
-            <div id="sahayak-messages" class="flex-1 p-3.5 overflow-y-auto space-y-3 text-xs bg-surface/50 font-body">
-                <!-- Welcome Bot Message -->
-                <div class="flex items-start gap-2">
-                    <div class="w-6 h-6 rounded-full bg-primary flex items-center justify-center flex-shrink-0 text-[12px] text-secondary-container">
-                        <span class="material-symbols-outlined text-[14px]">smart_toy</span>
-                    </div>
-                    <div class="bg-surface-container p-3 rounded-2xl rounded-tl-none border border-outline-variant/20 shadow-sm text-on-surface max-w-[85%] leading-relaxed">
-                        <p class="font-bold text-primary mb-1">नमस्ते! Welcome to MoTA SETU.</p>
-                        <p>I am your AI Sahayak. I guide students through document curing and help desk officers adjudicate Rule 14(b) dialect variances.</p>
-                    </div>
-                </div>
+function askSahayakQuick(query) {
+    const input = document.getElementById('sahayak-input');
+    if (input) {
+        input.value = query;
+        sendSahayakMessage();
+    }
+}
 
-                <!-- Quick Action Chips -->
-                <div class="pt-1 flex flex-wrap gap-1.5">
-                    <button onclick="sendSahayakQuick('Rule 14(b) क्या है?')" class="px-2.5 py-1 bg-surface-container-high hover:bg-secondary-container hover:text-on-secondary-container rounded-full text-[11px] font-semibold text-primary transition border border-outline-variant/30">
-                        📜 Rule 14(b) क्या है?
-                    </button>
-                    <button onclick="sendSahayakQuick('How to cure faded seal?')" class="px-2.5 py-1 bg-surface-container-high hover:bg-secondary-container hover:text-on-secondary-container rounded-full text-[11px] font-semibold text-primary transition border border-outline-variant/30">
-                        📑 Faded Seal Curing
-                    </button>
-                    <button onclick="sendSahayakQuick('Track ST-2026-8821')" class="px-2.5 py-1 bg-surface-container-high hover:bg-secondary-container hover:text-on-secondary-container rounded-full text-[11px] font-semibold text-primary transition border border-outline-variant/30">
-                        🔍 Track Application
-                    </button>
-                    <button onclick="sendSahayakQuick('Open Officer Desk')" class="px-2.5 py-1 bg-surface-container-high hover:bg-secondary-container hover:text-on-secondary-container rounded-full text-[11px] font-semibold text-primary transition border border-outline-variant/30">
-                        🏛️ Officer Desk
-                    </button>
-                    <button onclick="sendSahayakQuick('Show PFMS Payouts')" class="px-2.5 py-1 bg-surface-container-high hover:bg-secondary-container hover:text-on-secondary-container rounded-full text-[11px] font-semibold text-primary transition border border-outline-variant/30">
-                        💰 PFMS e-Kuber
-                    </button>
-                    <button onclick="sendSahayakQuick('Go to Login')" class="px-2.5 py-1 bg-surface-container-high hover:bg-secondary-container hover:text-on-secondary-container rounded-full text-[11px] font-semibold text-primary transition border border-outline-variant/30">
-                        🔐 Portal Sign In
-                    </button>
-                </div>
-            </div>
+async function sendSahayakMessage() {
+    const input = document.getElementById('sahayak-input');
+    const container = document.getElementById('sahayak-chat-messages');
+    if (!input || !container) return;
 
-            <!-- Input Bar -->
-            <div class="p-2.5 bg-surface-container-lowest border-t border-outline-variant/30 flex items-center gap-2">
-                <input id="sahayak-input" type="text" placeholder="Ask about Rule 14b, documents, status..." class="flex-1 bg-surface-container-low text-xs text-on-surface px-3 py-2 rounded-xl border border-outline-variant/40 outline-none focus:border-secondary focus:ring-1 focus:ring-secondary"/>
-                <button id="sahayak-mic-btn" title="Voice Input" class="p-2 rounded-xl bg-surface-container hover:bg-surface-container-high text-primary transition">
-                    <span class="material-symbols-outlined text-[18px]">mic</span>
-                </button>
-                <button id="sahayak-send-btn" class="p-2 rounded-xl bg-primary text-on-primary hover:bg-primary-container transition shadow-sm">
-                    <span class="material-symbols-outlined text-[18px]">send</span>
-                </button>
-            </div>
-        </div>
+    const query = input.value.trim();
+    if (!query) return;
 
-        <!-- Rollout Circular FAB Button -->
-        <div id="sahayak-fab" class="group relative flex items-center cursor-pointer">
-            <button class="h-14 w-14 group-hover:w-56 overflow-hidden transition-all duration-300 ease-out bg-primary hover:bg-primary-container text-on-primary rounded-full shadow-[0_8px_24px_rgba(0,21,61,0.35)] flex items-center border-2 border-secondary-container/60 pl-3.5 pr-4 relative">
-                <!-- Icon & Ping Indicator -->
-                <div class="relative flex-shrink-0 flex items-center justify-center">
-                    <span class="material-symbols-outlined text-[24px] text-secondary-container group-hover:rotate-12 transition-transform">smart_toy</span>
-                    <span class="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary-container opacity-75"></span>
-                        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-secondary-container"></span>
-                    </span>
-                </div>
-                <!-- Rolling Text (Revealed on Hover) -->
-                <div class="ml-3 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-left pointer-events-none">
-                    <p class="font-headline text-xs font-bold leading-tight text-on-primary">AI Sahayak | सहायता</p>
-                    <p class="text-[10px] text-secondary-container font-medium">24x7 Tribal Portal Guide</p>
-                </div>
-            </button>
+    // Append user message
+    const userMsg = document.createElement('div');
+    userMsg.className = 'flex justify-end';
+    userMsg.innerHTML = `
+        <div class="bg-primary text-on-primary p-3 rounded-2xl rounded-tr-sm max-w-[85%] text-xs font-medium leading-relaxed shadow-sm">
+            ${query}
         </div>
     `;
+    container.appendChild(userMsg);
+    input.value = '';
+    container.scrollTop = container.scrollHeight;
 
-    const fab = document.getElementById('sahayak-fab');
-    const drawer = document.getElementById('sahayak-drawer');
-    const closeBtn = document.getElementById('sahayak-close-btn');
-    const sendBtn = document.getElementById('sahayak-send-btn');
-    const input = document.getElementById('sahayak-input');
-    const voiceBtn = document.getElementById('sahayak-voice-toggle');
-    const micBtn = document.getElementById('sahayak-mic-btn');
+    // Append AI Typing placeholder
+    const aiMsg = document.createElement('div');
+    aiMsg.className = 'flex gap-2 items-start';
+    aiMsg.innerHTML = `
+        <div class="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-primary">
+            <span class="material-symbols-outlined text-[16px]">smart_toy</span>
+        </div>
+        <div class="bg-surface-container p-3 rounded-2xl rounded-tl-sm max-w-[85%] text-xs text-on-surface flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-secondary animate-ping"></span>
+            <span>Consulting MoTA Knowledge Engine & Rule 14(b)...</span>
+        </div>
+    `;
+    container.appendChild(aiMsg);
+    container.scrollTop = container.scrollHeight;
 
-    function toggleDrawer() {
-        const isHidden = drawer.classList.contains('hidden');
-        if (isHidden) {
-            drawer.classList.remove('hidden');
-            setTimeout(() => {
-                drawer.classList.remove('scale-95', 'opacity-0');
-                drawer.classList.add('scale-100', 'opacity-100', 'flex');
-            }, 10);
-            input.focus();
-        } else {
-            drawer.classList.remove('scale-100', 'opacity-100');
-            drawer.classList.add('scale-95', 'opacity-0');
-            setTimeout(() => {
-                drawer.classList.add('hidden');
-                drawer.classList.remove('flex');
-            }, 200);
-        }
-    }
-
-    if (fab) fab.addEventListener('click', toggleDrawer);
-    if (closeBtn) closeBtn.addEventListener('click', toggleDrawer);
-
-    if (voiceBtn) {
-        voiceBtn.addEventListener('click', () => {
-            isVoiceMuted = !isVoiceMuted;
-            const icon = voiceBtn.querySelector('.material-symbols-outlined');
-            if (icon) icon.innerText = isVoiceMuted ? 'volume_off' : 'volume_up';
-            showToast(isVoiceMuted ? 'Voice assistance muted' : 'Voice assistance enabled', isVoiceMuted ? 'volume_off' : 'volume_up');
+    try {
+        const res = await fetch('/api/sahayak/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: query, page_context: window.location.pathname })
         });
-    }
-
-    // Microphone speech recognition
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-        const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-        const recognition = new SpeechRec();
-        recognition.lang = 'hi-IN';
-        recognition.continuous = false;
-
-        recognition.onresult = (e) => {
-            const transcript = e.results[0][0].transcript;
-            input.value = transcript;
-            sendSahayakMessage();
-        };
-        recognition.onerror = () => showToast('Microphone input error. Please type your query.', 'mic_off');
-
-        if (micBtn) {
-            micBtn.addEventListener('click', () => {
-                try {
-                    recognition.start();
-                    showToast('Listening in Hindi / English...', 'mic');
-                } catch (err) {
-                    recognition.stop();
-                }
-            });
+        const data = await res.json();
+        
+        let navBtn = '';
+        if (data.navigation_path) {
+            navBtn = `<div class="mt-2 pt-2 border-t border-outline-variant/30">
+                <a href="${data.navigation_path}" class="inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:underline">
+                    Go to Portal <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+                </a>
+            </div>`;
         }
-    } else if (micBtn) {
-        micBtn.addEventListener('click', () => showToast('Speech recognition not supported in this browser. Please type.', 'info'));
-    }
 
-    async function sendSahayakMessage() {
-        const msg = input.value.trim();
-        if (!msg) return;
-        input.value = '';
-
-        const msgContainer = document.getElementById('sahayak-messages');
-
-        // User message bubble
-        const userDiv = document.createElement('div');
-        userDiv.className = 'flex items-start justify-end gap-2';
-        userDiv.innerHTML = `
-            <div class="bg-primary text-on-primary p-2.5 rounded-2xl rounded-tr-none text-xs max-w-[85%] shadow-sm">
-                <p>${msg}</p>
+        aiMsg.innerHTML = `
+            <div class="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-primary">
+                <span class="material-symbols-outlined text-[16px]">smart_toy</span>
             </div>
-            <div class="w-6 h-6 rounded-full bg-surface-container-high flex items-center justify-center flex-shrink-0 text-[12px] text-primary">
-                <span class="material-symbols-outlined text-[14px]">person</span>
+            <div class="bg-surface-container p-3 rounded-2xl rounded-tl-sm max-w-[85%] text-xs text-on-surface leading-relaxed">
+                <p>${data.reply}</p>
+                ${navBtn}
             </div>
         `;
-        msgContainer.appendChild(userDiv);
-        msgContainer.scrollTop = msgContainer.scrollHeight;
-
-        // Thinking indicator
-        const thinkingDiv = document.createElement('div');
-        thinkingDiv.className = 'flex items-start gap-2';
-        thinkingDiv.innerHTML = `
-            <div class="w-6 h-6 rounded-full bg-primary flex items-center justify-center flex-shrink-0 text-[12px] text-secondary-container">
-                <span class="material-symbols-outlined text-[14px]">smart_toy</span>
+        speakText(data.speak_text || data.reply);
+    } catch (e) {
+        aiMsg.innerHTML = `
+            <div class="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-primary">
+                <span class="material-symbols-outlined text-[16px]">smart_toy</span>
             </div>
-            <div class="bg-surface-container p-2.5 rounded-2xl rounded-tl-none border border-outline-variant/20 text-xs text-on-surface-variant flex items-center gap-1.5 animate-pulse">
-                <span>Analyzing statutory rules...</span>
+            <div class="bg-surface-container p-3 rounded-2xl rounded-tl-sm max-w-[85%] text-xs text-on-surface leading-relaxed">
+                <p>MoTA SETU ensures zero scholarship rejections for genuine tribal scholars. Under Rule 14(b), dialectical spelling variations are cured autonomously, and desk officers authorize electronic DBT mandates directly.</p>
+                <div class="mt-2 pt-2 border-t border-outline-variant/30 flex gap-2">
+                    <a href="/apply" class="text-[11px] font-bold text-primary hover:underline">Apply Portal →</a>
+                    <a href="/officer" class="text-[11px] font-bold text-secondary hover:underline">Officer Desk →</a>
+                </div>
             </div>
         `;
-        msgContainer.appendChild(thinkingDiv);
-        msgContainer.scrollTop = msgContainer.scrollHeight;
-
-        try {
-            const res = await fetch('/api/sahayak/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: msg, page_context: window.location.pathname })
-            });
-            const data = await res.json();
-            thinkingDiv.remove();
-
-            const botDiv = document.createElement('div');
-            botDiv.className = 'flex items-start gap-2';
-            
-            let navButtonHtml = '';
-            if (data.navigation_path) {
-                navButtonHtml = `
-                    <div class="mt-2 pt-2 border-t border-outline-variant/20 flex items-center gap-2">
-                        <a href="${data.navigation_path}" class="inline-flex items-center gap-1 px-3 py-1 bg-secondary text-on-secondary rounded-lg font-bold text-[11px] hover:bg-secondary/90 transition shadow-sm">
-                            <span class="material-symbols-outlined text-[14px]">arrow_forward</span> Go to Page
-                        </a>
-                    </div>
-                `;
-            }
-
-            botDiv.innerHTML = `
-                <div class="w-6 h-6 rounded-full bg-primary flex items-center justify-center flex-shrink-0 text-[12px] text-secondary-container">
-                    <span class="material-symbols-outlined text-[14px]">smart_toy</span>
-                </div>
-                <div class="bg-surface-container p-3 rounded-2xl rounded-tl-none border border-outline-variant/20 text-xs text-on-surface max-w-[85%] leading-relaxed shadow-sm">
-                    <p>${data.reply}</p>
-                    ${navButtonHtml}
-                </div>
-            `;
-            msgContainer.appendChild(botDiv);
-            msgContainer.scrollTop = msgContainer.scrollHeight;
-
-            if (data.speak_text) {
-                speakText(data.speak_text);
-            }
-        } catch (err) {
-            thinkingDiv.remove();
-            const botDiv = document.createElement('div');
-            botDiv.className = 'flex items-start gap-2';
-            botDiv.innerHTML = `
-                <div class="w-6 h-6 rounded-full bg-primary flex items-center justify-center flex-shrink-0 text-[12px] text-secondary-container">
-                    <span class="material-symbols-outlined text-[14px]">smart_toy</span>
-                </div>
-                <div class="bg-surface-container p-3 rounded-2xl rounded-tl-none border border-outline-variant/20 text-xs text-on-surface max-w-[85%] leading-relaxed shadow-sm">
-                    <p>MoTA SETU guarantees statutory protection under Rule 14(b) for tribal dialect phonetic variations. Use the top navigation bar to explore the application or officer scrutiny desks.</p>
-                </div>
-            `;
-            msgContainer.appendChild(botDiv);
-            msgContainer.scrollTop = msgContainer.scrollHeight;
-        }
     }
-
-    if (sendBtn) sendBtn.addEventListener('click', sendSahayakMessage);
-    if (input) {
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') sendSahayakMessage();
-        });
-    }
-
-    window.sendSahayakQuick = (text) => {
-        input.value = text;
-        sendSahayakMessage();
-    };
+    container.scrollTop = container.scrollHeight;
 }
 
+// Close drawer on backdrop click or Escape
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const drawer = document.getElementById('sahayak-drawer');
+        if (drawer && !drawer.classList.contains('hidden')) drawer.classList.add('hidden');
+    }
+    if (e.altKey && (e.key === 'h' || e.key === 'H')) {
+        e.preventDefault();
+        toggleSahayakDrawer();
+    }
+});
+
 // ==========================================
-// 3. Global Header Search & Quick Actions
+// 3. Global Header Controller (Font, Lang, Search)
 // ==========================================
+
+let currentFontSizeIndex = 1;
+const fontScales = ['90%', '100%', '115%'];
 
 function initGlobalHeader() {
-    // 1. Profile / Sign In link to /auth
-    document.querySelectorAll('.rounded-full.bg-primary, header .material-symbols-outlined').forEach(el => {
-        if ((el.textContent || '').includes('person')) {
-            const parent = el.closest('div');
-            if (parent && !parent.closest('a')) {
-                parent.style.cursor = 'pointer';
-                parent.title = 'Sign In / Portal Access';
-                parent.onclick = () => window.location.href = '/auth';
-            }
-        }
+    // Font Scaling A-, A, A+
+    getElements('button', 'A-').forEach(btn => {
+        btn.onclick = () => {
+            currentFontSizeIndex = Math.max(0, currentFontSizeIndex - 1);
+            document.documentElement.style.fontSize = fontScales[currentFontSizeIndex];
+            showToast(`Text Size: ${fontScales[currentFontSizeIndex]}`, 'format_size');
+        };
     });
-
-    // 2. Global Header Search Live Filter
-    const searchInputs = document.querySelectorAll('header input[type="text"]');
-    searchInputs.forEach(input => {
-        let resultsDropdown = null;
-
-        input.addEventListener('focus', () => {
-            if (!resultsDropdown) {
-                resultsDropdown = document.createElement('div');
-                resultsDropdown.className = 'absolute left-0 right-0 top-full mt-2 bg-surface-container-lowest border border-outline-variant/40 rounded-2xl shadow-2xl p-3 z-50 text-xs hidden';
-                input.parentElement.style.position = 'relative';
-                input.parentElement.appendChild(resultsDropdown);
-            }
-        });
-
-        input.addEventListener('input', (e) => {
-            const val = e.target.value.trim().toLowerCase();
-            if (!val) {
-                if (resultsDropdown) resultsDropdown.classList.add('hidden');
-                return;
-            }
-
-            const items = [
-                { title: 'Mangal Soren (#MOTA-2025-JH-88391)', subtitle: 'Santhal | Rule 14(b) Phonetic Variance (Soren vs Saren)', link: '/officer' },
-                { title: 'Anjali Kerketta (#MOTA-2025-OD-10492)', subtitle: 'Oraon | Faded Tehsildar Stamp (Curing Pending)', link: '/track-cure' },
-                { title: 'Birsa Munda (#MOTA-2025-MP-51204)', subtitle: 'Munda | 100% Pre-Approved | Ready for Sanction', link: '/officer' },
-                { title: 'Sunita Bodo (#MOTA-2025-CG-99120)', subtitle: 'Bodo | NPCI Bank Mandate Inactive', link: '/ledger' },
-                { title: 'National Tribal Fellowship (NFST)', subtitle: '₹31,000 - ₹35,000/mo Fellowship Guidelines', link: '/apply' },
-                { title: 'National Overseas Scholarship (NOS)', subtitle: 'Full funding for premier international universities', link: '/apply' },
-                { title: 'Statutory Rule 14(b)', subtitle: 'Autonomous dialect protection standard', link: '/officer' },
-                { title: 'Portal Sign In / Registration', subtitle: 'DigiLocker SSO & MeriPehchaan for Officers', link: '/auth' }
-            ];
-
-            const matches = items.filter(i => i.title.toLowerCase().includes(val) || i.subtitle.toLowerCase().includes(val));
-            if (matches.length === 0) {
-                resultsDropdown.innerHTML = `<div class="p-2 text-on-surface-variant text-center">No exact records matching "${val}". Try "Mangal" or "Rule 14b"</div>`;
-            } else {
-                resultsDropdown.innerHTML = `
-                    <p class="font-bold text-primary mb-2 px-1 text-[11px] uppercase tracking-wider">Direct Portal Results (${matches.length})</p>
-                    <div class="space-y-1">
-                        ${matches.map(m => `
-                            <a href="${m.link}" class="block p-2 rounded-xl hover:bg-surface-container transition flex items-center justify-between">
-                                <div>
-                                    <p class="font-bold text-primary">${m.title}</p>
-                                    <p class="text-[11px] text-on-surface-variant">${m.subtitle}</p>
-                                </div>
-                                <span class="material-symbols-outlined text-[16px] text-secondary">arrow_forward</span>
-                            </a>
-                        `).join('')}
-                    </div>
-                `;
-            }
-            resultsDropdown.classList.remove('hidden');
-        });
-
-        document.addEventListener('click', (e) => {
-            if (resultsDropdown && !input.contains(e.target) && !resultsDropdown.contains(e.target)) {
-                resultsDropdown.classList.add('hidden');
-            }
-        });
-    });
-
-    // 3. Language Switchers in Header
-    document.querySelectorAll('header span').forEach(span => {
-        const txt = (span.textContent || '').trim();
-        if (['हिन्दी', 'संथाली', 'English', 'गोंडी', 'ଓଡ଼ିଆ'].includes(txt)) {
-            span.style.cursor = 'pointer';
-            span.onclick = () => {
-                showToast(`Language switched to ${txt}`, 'translate');
-                if (txt === 'हिन्दी') speakText('जनजातीय कार्य मंत्रालय के छात्रवृत्ति पोर्टल में आपका स्वागत है।', 'hi-IN');
-                else if (txt === 'English') speakText('Welcome to Ministry of Tribal Affairs Scholarship Scrutiny Portal.', 'en-IN');
+    getElements('button', 'A').forEach(btn => {
+        if (btn.textContent.trim() === 'A') {
+            btn.onclick = () => {
+                currentFontSizeIndex = 1;
+                document.documentElement.style.fontSize = fontScales[currentFontSizeIndex];
+                showToast(`Text Size: 100% (Standard)`, 'format_size');
             };
         }
     });
+    getElements('button', 'A+').forEach(btn => {
+        btn.onclick = () => {
+            currentFontSizeIndex = Math.min(fontScales.length - 1, currentFontSizeIndex + 1);
+            document.documentElement.style.fontSize = fontScales[currentFontSizeIndex];
+            showToast(`Text Size: ${fontScales[currentFontSizeIndex]}`, 'format_size');
+        };
+    });
 
-    // 4. Accessibility Font Resizers (A-, A, A+)
-    document.querySelectorAll('header button').forEach(btn => {
-        const action = (btn.textContent || '').trim();
-        if (['A-', 'A', 'A+'].includes(action)) {
-            btn.onclick = (e) => {
+    // Language Switcher Links
+    const langNames = {
+        'हिन्दी': 'Hindi',
+        'संथाली': 'Santhali (Ol Chiki)',
+        'गोंडी': 'Gondi',
+        'ଓଡ଼ିଆ': 'Odia',
+        'English': 'English'
+    };
+    document.querySelectorAll('a, button').forEach(el => {
+        const txt = el.textContent.trim();
+        if (langNames[txt]) {
+            el.onclick = (e) => {
                 e.preventDefault();
-                if (action === 'A-') document.documentElement.style.fontSize = '14px';
-                else if (action === 'A') document.documentElement.style.fontSize = '16px';
-                else if (action === 'A+') document.documentElement.style.fontSize = '18px';
-                showToast(`Font scaled: ${action}`, 'format_size');
+                showToast(`Language set to: ${langNames[txt]} (भाषा बदली गई)`, 'translate');
+                speakText(`Language preference set to ${langNames[txt]}`);
             };
+        }
+    });
+
+    // Global Search (Ctrl + K)
+    document.querySelectorAll('input[placeholder*="Search"], input[placeholder*="Ctrl + K"]').forEach(inp => {
+        inp.addEventListener('focus', openGlobalSearchModal);
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+            e.preventDefault();
+            openGlobalSearchModal();
         }
     });
 }
 
+function openGlobalSearchModal() {
+    let existing = document.getElementById('global-search-modal');
+    if (existing) {
+        existing.classList.remove('hidden');
+        const input = existing.querySelector('input');
+        if (input) input.focus();
+        return;
+    }
+
+    const modal = document.createElement('div');
+    modal.id = 'global-search-modal';
+    modal.className = 'fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-start justify-center pt-20 p-4 animate-in fade-in duration-200';
+    modal.innerHTML = `
+        <div class="bg-surface-container-lowest border border-outline-variant/60 rounded-2xl max-w-xl w-full shadow-2xl overflow-hidden flex flex-col">
+            <div class="p-3 border-b border-outline-variant flex items-center gap-3 bg-surface-container-low">
+                <span class="material-symbols-outlined text-primary text-[22px]">search</span>
+                <input type="text" id="global-search-input" placeholder="Search portals, schemes, Rule 14(b), or Ref Numbers..." 
+                    class="flex-1 bg-transparent text-sm focus:outline-none text-on-surface font-medium"/>
+                <span class="text-xs px-2 py-0.5 rounded bg-surface-container text-on-surface-variant font-mono">ESC to close</span>
+            </div>
+            <div class="p-3 max-h-80 overflow-y-auto space-y-1 text-xs text-on-surface">
+                <div class="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant px-2 py-1">Quick Portals</div>
+                <a href="/apply" class="flex items-center justify-between p-2.5 rounded-xl hover:bg-surface-container transition-colors">
+                    <span class="flex items-center gap-2 font-medium"><span class="material-symbols-outlined text-primary text-[18px]">school</span> NFST Student Application Portal</span>
+                    <span class="text-secondary font-bold">Apply Now →</span>
+                </a>
+                <a href="/officer" class="flex items-center justify-between p-2.5 rounded-xl hover:bg-surface-container transition-colors">
+                    <span class="flex items-center gap-2 font-medium"><span class="material-symbols-outlined text-primary text-[18px]">gavel</span> Officer Scrutiny Console (Rule 14b Desk)</span>
+                    <span class="text-secondary font-bold">Open Console →</span>
+                </a>
+                <a href="/track-cure" class="flex items-center justify-between p-2.5 rounded-xl hover:bg-surface-container transition-colors">
+                    <span class="flex items-center gap-2 font-medium"><span class="material-symbols-outlined text-primary text-[18px]">healing</span> Track & Cure Defect (Autonomous Seal Re-check)</span>
+                    <span class="text-secondary font-bold">Track →</span>
+                </a>
+                <a href="/ledger" class="flex items-center justify-between p-2.5 rounded-xl hover:bg-surface-container transition-colors">
+                    <span class="flex items-center gap-2 font-medium"><span class="material-symbols-outlined text-primary text-[18px]">account_balance</span> PFMS Disbursal & RBI e-Kuber Ledger</span>
+                    <span class="text-secondary font-bold">View Ledger →</span>
+                </a>
+                <a href="/analytics" class="flex items-center justify-between p-2.5 rounded-xl hover:bg-surface-container transition-colors">
+                    <span class="flex items-center gap-2 font-medium"><span class="material-symbols-outlined text-primary text-[18px]">insights</span> Executive Ministry Analytics & KPIs</span>
+                    <span class="text-secondary font-bold">View Analytics →</span>
+                </a>
+                <div class="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant px-2 pt-3 pb-1">Pre-loaded Scholar Cases</div>
+                <a href="/officer" class="flex items-center justify-between p-2.5 rounded-xl hover:bg-surface-container transition-colors">
+                    <span class="flex items-center gap-2 font-mono">#MOTA-2025-JH-88391 • Mangal Soren</span>
+                    <span class="text-amber-600 font-bold bg-amber-50 px-2 py-0.5 rounded">Rule 14(b) Triggered</span>
+                </a>
+                <a href="/track-cure?ref=MOTA-2025-JH-88391" class="flex items-center justify-between p-2.5 rounded-xl hover:bg-surface-container transition-colors">
+                    <span class="flex items-center gap-2 font-mono">#MOTA-2025-MP-51204 • Birsa Munda</span>
+                    <span class="text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded">Pre-Approved</span>
+                </a>
+            </div>
+        </div>
+    `;
+    modal.onclick = (e) => {
+        if (e.target === modal) modal.remove();
+    };
+    document.body.appendChild(modal);
+    const input = document.getElementById('global-search-input');
+    if (input) input.focus();
+}
+
 // ==========================================
-// 4. Page Specific Handlers
+// 4. Landing Page Controller (index.html)
 // ==========================================
 
-// --- A. LANDING PAGE (index.html) ---
 function initLandingPage() {
-    if (!window.location.pathname.endsWith('/') && !window.location.pathname.endsWith('index.html')) return;
+    if (window.location.pathname !== '/' && !window.location.pathname.endsWith('index.html')) return;
 
-    // Track input in hero
-    const trackInputs = document.querySelectorAll('main input[type="text"]');
-    trackInputs.forEach(input => {
-        const btn = input.parentElement ? input.parentElement.querySelector('button') : null;
-        if (btn) {
-            btn.onclick = () => {
-                const ref = input.value.trim() || 'MOTA-2025-JH-88391';
-                window.location.href = `/track-cure?ref=${encodeURIComponent(ref)}`;
-            };
-        }
+    // Export CSV Audit Button
+    getElements('button', 'Export CSV').concat(getElements('button', 'Export')).concat(getElements('a', 'Export CSV')).forEach(btn => {
+        btn.onclick = (e) => {
+            e.preventDefault();
+            const csv = `Reference_No,Applicant_Name,State,Tribe,Scheme,Readability_Score,Seal_Detected,Status,Audit_Hash
+` +
+                `MOTA-2025-JH-88391,Mangal Soren,Jharkhand,Santhal,NFST Fellowship,98.4,99.1,OFFICER_APPROVED,e7f2b1c890a5d4f3e2b1c890a5d4f3e2
+` +
+                `MOTA-2025-OD-10492,Anjali Kerketta,Odisha,Oraon,National Overseas,97.2,98.5,AI_PRE_APPROVED,b8a1c9e4f0d2b6a8b8a1c9e4f0d2b6a8
+` +
+                `MOTA-2025-MP-51204,Birsa Munda,Madhya Pradesh,Bhil,Top Class Education,99.0,99.4,DISBURSED_DBT,c4d5e6f7a8b9c0d1c4d5e6f7a8b9c0d1
+`;
+            downloadFile('MoTA_SETU_Audit_Ledger_2025.csv', csv, 'text/csv');
+            showToast('MoTA SETU Cryptographic Audit Trail Exported (CSV)', 'download');
+        };
     });
 
-    // Scheme Exploration Modals
-    getElements('a', 'National Tribal Fellowship').concat(getElements('a', 'National Overseas Scholarship')).forEach(link => {
-        if (link.getAttribute('href') === '#') {
-            link.onclick = (e) => {
-                e.preventDefault();
-                showSchemeModal(link.innerText.trim());
-            };
-        }
+    // Scheme Info Cards
+    document.querySelectorAll('[data-scheme]').forEach(card => {
+        card.onclick = () => {
+            const scheme = card.getAttribute('data-scheme') || 'NFST Fellowship';
+            showSchemeModal(scheme);
+        };
     });
 }
 
 function showSchemeModal(schemeName) {
-    let modal = document.getElementById('scheme-details-modal');
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'scheme-details-modal';
-        modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4';
-        document.body.appendChild(modal);
-    }
-
+    let modal = document.createElement('div');
+    modal.className = 'fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4';
     modal.innerHTML = `
-        <div class="bg-surface-container-lowest border border-outline-variant/40 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-4">
-            <div class="flex items-start justify-between">
-                <div>
-                    <span class="text-xs font-bold text-secondary bg-secondary/10 px-2.5 py-1 rounded-full">Statutory Scheme</span>
-                    <h3 class="font-headline text-xl font-bold text-primary mt-1">${schemeName}</h3>
+        <div class="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-outline-variant">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary text-[24px]">school</span>
+                    <h3 class="font-bold text-base text-primary">${schemeName}</h3>
                 </div>
-                <button onclick="document.getElementById('scheme-details-modal').remove()" class="p-1 rounded-full hover:bg-surface-container text-on-surface-variant">
+                <button onclick="this.closest('.fixed').remove()" class="p-1 rounded-full hover:bg-surface-container text-on-surface-variant">
                     <span class="material-symbols-outlined text-[20px]">close</span>
                 </button>
             </div>
-            <div class="space-y-2.5 text-xs text-on-surface-variant">
-                <p><strong>Nodal Authority:</strong> Ministry of Tribal Affairs (MoTA), Shastri Bhawan, New Delhi.</p>
-                <p><strong>Monthly Fellowship Grant:</strong> ₹31,000/mo (JRF) + HRA; ₹35,000/mo (SRF) directly disbursed via RBI e-Kuber APBS.</p>
-                <p><strong>Income Ceiling:</strong> ₹6,00,000 per annum (No ceiling for PVTG communities under Article 342).</p>
-                <p><strong>Verification Standard:</strong> Rule 14(b) Phonetic Tolerant Scrutiny with Section 65B IT Act Electronic Audit Evidence.</p>
+            <div class="space-y-2 text-xs text-on-surface-variant leading-relaxed">
+                <p><strong>Statutory Body:</strong> Ministry of Tribal Affairs (MoTA), Government of India.</p>
+                <p><strong>Fellowship Amount:</strong> ₹31,000 to ₹35,000 / month + Annual Contingency Allowance directly via RBI e-Kuber APBS.</p>
+                <p><strong>Rule 14(b) Protection:</strong> Automatic tolerance for regional tribal surname transliterations (e.g. Soren / Saren / Hembrom).</p>
+                <p><strong>Documentation:</strong> ST Caste Certificate, AISHE Institute Enrollment, DigiLocker Aadhaar KYC.</p>
             </div>
             <div class="flex items-center gap-3 pt-2">
-                <a href="/apply" class="flex-1 py-2.5 bg-primary text-on-primary rounded-xl font-bold text-xs text-center hover:bg-primary-container transition shadow">Apply with DigiLocker</a>
-                <button onclick="document.getElementById('scheme-details-modal').remove()" class="px-4 py-2.5 bg-surface-container text-primary rounded-xl font-bold text-xs hover:bg-surface-container-high transition">Close</button>
-            </div>
-        </div>
-    `;
-}
-
-// --- B. APPLICATION PORTAL (apply.html) ---
-function initApplyPage() {
-    if (!window.location.pathname.includes('/apply')) return;
-
-    // Save Draft Button
-    getElements('button', 'Draft').forEach(btn => {
-        btn.onclick = (e) => {
-            e.preventDefault();
-            const draftRef = `MOTA-DRAFT-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-            localStorage.setItem('mota_scholar_draft', draftRef);
-            showToast(`Application draft saved as ${draftRef}`, 'save');
-        };
-    });
-
-    // DigiLocker Auto-fill
-    const digiBtn = getElement('button', 'DigiLocker');
-    if (digiBtn) {
-        digiBtn.onclick = () => {
-            showToast('Syncing with DigiLocker API...', 'sync');
-            setTimeout(() => {
-                showToast('DigiLocker Verified: Birsa Munda (Aadhaar & Caste Certificate synced)', 'verified');
-            }, 800);
-        };
-    }
-
-    // Submit Application Button
-    const submitBtn = getElement('button', 'Submit Application') || document.querySelector('button[type="submit"]');
-    if (submitBtn) {
-        submitBtn.onclick = (e) => {
-            e.preventDefault();
-            const newRef = `MOTA-2026-JH-${Math.floor(10000 + Math.random() * 90000)}`;
-            showToast(`Submitting ${newRef} to AI Scrutiny Pipeline...`, 'hourglass_top');
-            setTimeout(() => {
-                showApplicationSuccessModal(newRef);
-            }, 1200);
-        };
-    }
-
-    // Live Document Upload & CV/OCR Pre-Check
-    const docUploadInput = document.getElementById('docUploadInput') || document.querySelector('input[type="file"]');
-    if (docUploadInput) {
-        docUploadInput.addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            showToast(`Analyzing ${file.name} with OpenCV & Gemini OCR...`, 'document_scanner');
-            const formData = new FormData();
-            formData.append('file', file);
-
-            try {
-                const res = await fetch('/api/scan-document', { method: 'POST', body: formData });
-                const data = await res.json();
-                showToast(`Analysis Complete: Blur ${data.cv_quality.blur_score}/100 | Contrast ${data.cv_quality.contrast_score}/100`, 'verified');
-            } catch (err) {
-                showToast(`Document uploaded. Quality Score: 94/100 (Passes Rule 14b threshold)`, 'verified');
-            }
-        });
-    }
-}
-
-function showApplicationSuccessModal(refNo) {
-    let modal = document.createElement('div');
-    modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4';
-    modal.innerHTML = `
-        <div class="bg-surface-container-lowest border border-outline-variant/40 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl text-center space-y-4">
-            <div class="w-16 h-16 rounded-full bg-secondary/10 text-secondary flex items-center justify-center mx-auto">
-                <span class="material-symbols-outlined text-[36px]">verified</span>
-            </div>
-            <h3 class="font-headline text-xl font-bold text-primary">Application Submitted Successfully!</h3>
-            <p class="text-xs text-on-surface-variant">Your application has been ingested into the MoTA SETU pipeline and passed AI quality inspection.</p>
-            <div class="p-3 bg-surface-container-low rounded-2xl border border-secondary/30 font-mono text-sm font-bold text-primary">
-                ${refNo}
-            </div>
-            <div class="text-[11px] text-on-surface-variant text-left bg-surface-container p-3 rounded-xl space-y-1">
-                <p>✓ OpenCV Blur Check: <strong>94/100 (Clean)</strong></p>
-                <p>✓ DigiLocker Hash: <strong>SHA-256 Verified</strong></p>
-                <p>✓ Statutory Desk: <strong>Queued for L-1 Tehsil Scrutiny</strong></p>
-            </div>
-            <div class="flex items-center gap-2 pt-2">
-                <a href="/track-cure?ref=${refNo}" class="flex-1 py-2.5 bg-primary text-on-primary rounded-xl font-bold text-xs hover:bg-primary-container transition shadow">Track Application</a>
-                <button onclick="this.closest('.fixed').remove()" class="px-4 py-2.5 bg-surface-container text-primary rounded-xl font-bold text-xs">Dismiss</button>
+                <a href="/apply" class="flex-1 py-2.5 bg-primary text-white rounded-xl font-bold text-xs text-center hover:bg-primary/90 transition shadow">Apply with DigiLocker</a>
+                <button onclick="this.closest('.fixed').remove()" class="px-4 py-2.5 bg-surface-container text-primary rounded-xl font-bold text-xs hover:bg-surface-container-high transition">Close</button>
             </div>
         </div>
     `;
     document.body.appendChild(modal);
 }
 
-// --- C. OFFICER SCRUTINY CONSOLE (officer.html) ---
-let officerDocScale = 1.0;
-let officerDocRotation = 0;
+// ==========================================
+// 5. Unified Sovereign Identity Gateway (auth.html)
+// ==========================================
+
+function initAuthPage() {
+    if (!window.location.pathname.includes('/auth')) return;
+
+    // Dual Tab switching
+    const tabBtnScholar = document.getElementById('tabBtnScholar');
+    const tabBtnOfficer = document.getElementById('tabBtnOfficer');
+    const panelScholar = document.getElementById('panelScholar');
+    const panelOfficer = document.getElementById('panelOfficer');
+
+    window.switchTab = function(role) {
+        if (role === 'scholar') {
+            if (tabBtnScholar) {
+                tabBtnScholar.className = "flex-1 py-3 px-space-md rounded-lg flex items-center justify-center gap-space-sm font-label-md text-label-md transition-all duration-200 bg-primary text-on-primary shadow-sm";
+                tabBtnScholar.setAttribute('aria-selected', 'true');
+            }
+            if (tabBtnOfficer) {
+                tabBtnOfficer.className = "flex-1 py-3 px-space-md rounded-lg flex items-center justify-center gap-space-sm font-label-md text-label-md transition-all duration-200 text-on-surface hover:bg-surface-container-high";
+                tabBtnOfficer.setAttribute('aria-selected', 'false');
+            }
+            if (panelScholar) {
+                panelScholar.classList.remove('hidden');
+                panelScholar.classList.add('flex');
+            }
+            if (panelOfficer) {
+                panelOfficer.classList.add('hidden');
+                panelOfficer.classList.remove('flex');
+            }
+        } else {
+            if (tabBtnOfficer) {
+                tabBtnOfficer.className = "flex-1 py-3 px-space-md rounded-lg flex items-center justify-center gap-space-sm font-label-md text-label-md transition-all duration-200 bg-primary text-on-primary shadow-sm";
+                tabBtnOfficer.setAttribute('aria-selected', 'true');
+            }
+            if (tabBtnScholar) {
+                tabBtnScholar.className = "flex-1 py-3 px-space-md rounded-lg flex items-center justify-center gap-space-sm font-label-md text-label-md transition-all duration-200 text-on-surface hover:bg-surface-container-high";
+                tabBtnScholar.setAttribute('aria-selected', 'false');
+            }
+            if (panelOfficer) {
+                panelOfficer.classList.remove('hidden');
+                panelOfficer.classList.add('flex');
+            }
+            if (panelScholar) {
+                panelScholar.classList.add('hidden');
+                panelScholar.classList.remove('flex');
+            }
+        }
+    };
+
+    // Quick Hackathon Demo Fill Helpers
+    window.fillDemoStudent = function() {
+        window.switchTab('scholar');
+        const aadhaarInput = document.querySelector('#panelScholar input[type="text"]');
+        if (aadhaarInput) aadhaarInput.value = "9842 8839 4912";
+        
+        const consentBox = document.querySelector('#panelScholar input[type="checkbox"]');
+        if (consentBox) consentBox.checked = true;
+
+        const otpInputs = document.querySelectorAll('#panelScholar input.text-center');
+        const demoCode = ['7', '8', '9', '1', '2', '4'];
+        otpInputs.forEach((inp, idx) => {
+            if (demoCode[idx]) inp.value = demoCode[idx];
+        });
+
+        showToast('Demo Scholar Loaded: Mangal Soren (Jharkhand ST). Click Verify below to enter!', 'verified');
+        speakText('Demo credentials for tribal scholar Mangal Soren loaded.');
+    };
+
+    window.fillDemoOfficer = function() {
+        window.switchTab('officer');
+        const emailInput = document.querySelector('#panelOfficer input[type="text"], #panelOfficer input[type="email"]');
+        if (emailInput) emailInput.value = "s.rao@nic.in (Smt. Sunita Rao, Director MoTA)";
+
+        const kavachCodeEl = document.getElementById('kavachCode');
+        showToast('Demo Officer Loaded: Smt. Sunita Rao (MoTA Nodal Officer). Click Open Console to enter!', 'verified');
+        speakText('Demo credentials for ministry verification officer loaded.');
+    };
+
+    // Add Demo Fill Bar right above tabs if not present
+    const tablist = document.querySelector('[role="tablist"]');
+    if (tablist && !document.getElementById('demo-fill-bar')) {
+        const demoBar = document.createElement('div');
+        demoBar.id = 'demo-fill-bar';
+        demoBar.className = 'mb-4 p-3 bg-primary/5 rounded-xl border border-primary/20 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs';
+        demoBar.innerHTML = `
+            <span class="font-bold text-primary flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[18px]">bolt</span> Quick Hackathon Jury Demo Fill:
+            </span>
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="fillDemoStudent()" class="px-3 py-1.5 bg-secondary text-white rounded-lg font-bold hover:bg-secondary/90 transition shadow-sm flex items-center gap-1 cursor-pointer">
+                    <span class="material-symbols-outlined text-[16px]">school</span> Demo Student (Mangal Soren)
+                </button>
+                <button type="button" onclick="fillDemoOfficer()" class="px-3 py-1.5 bg-primary text-white rounded-lg font-bold hover:bg-primary/90 transition shadow-sm flex items-center gap-1 cursor-pointer">
+                    <span class="material-symbols-outlined text-[16px]">verified_user</span> Demo Officer (Smt. Sunita Rao)
+                </button>
+            </div>
+        `;
+        tablist.parentElement.insertBefore(demoBar, tablist);
+    }
+
+    // DigiLocker One-Click Sync
+    getElements('#panelScholar button', 'DigiLocker').forEach(btn => {
+        btn.onclick = (e) => {
+            e.preventDefault();
+            window.fillDemoStudent();
+        };
+    });
+
+    // Student Verify Button -> Navigates to /apply
+    getElements('#panelScholar button', 'Verify').forEach(btn => {
+        btn.onclick = (e) => {
+            e.preventDefault();
+            btn.innerHTML = `<span class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span> Authenticating DigiLocker...`;
+            showToast('DigiLocker Sovereign Token Verified! Redirecting to Fellowship Portal...', 'verified');
+            setTimeout(() => {
+                window.location.href = '/apply';
+            }, 600);
+        };
+    });
+
+    // Officer Authenticate Button -> Navigates to /officer
+    getElements('#panelOfficer button', 'Open Ministry Scrutiny').concat(getElements('#panelOfficer button', 'Authenticate via Parichay')).forEach(btn => {
+        btn.onclick = (e) => {
+            e.preventDefault();
+            btn.innerHTML = `<span class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span> Authorizing Kavach 2FA...`;
+            showToast('MeriPehchaan SSO Authorized! Opening Officer Scrutiny Console...', 'verified');
+            setTimeout(() => {
+                window.location.href = '/officer';
+            }, 600);
+        };
+    });
+
+    // Audio assistance button
+    getElements('#panelScholar button', 'volume_up').forEach(btn => {
+        btn.onclick = () => {
+            speakText("आप जनजातीय कार्य मंत्रालय के सेतु पोर्टल में आधार या डिजिलॉकर से लॉगिन कर सकते हैं।");
+        };
+    });
+}
+
+// ==========================================
+// 6. Application Form Controller (apply.html)
+// ==========================================
+
+function initApplyPage() {
+    if (!window.location.pathname.includes('/apply')) return;
+
+    // Pull from DigiLocker
+    getElements('button', 'Pull from DigiLocker').forEach(btn => {
+        btn.onclick = (e) => {
+            e.preventDefault();
+            btn.innerHTML = `<span class="material-symbols-outlined text-[18px] animate-spin">sync</span> Syncing...`;
+            setTimeout(() => {
+                btn.innerHTML = `<span class="material-symbols-outlined text-[18px]">verified</span> Synced with DigiLocker`;
+                btn.className = "px-4 py-2 bg-emerald-600 text-white rounded-lg font-bold text-xs flex items-center gap-1.5 shadow";
+                
+                // Populate input fields if present
+                const nameInputs = document.querySelectorAll('input[type="text"]');
+                if (nameInputs.length > 0) nameInputs[0].value = "Mangal Soren";
+                
+                showToast('DigiLocker Identity Verified! Name: Mangal Soren | ST Caste: Santhal | Ref: JH/ST/2021/88391', 'verified');
+                speakText('DigiLocker credentials successfully verified for Mangal Soren.');
+            }, 600);
+        };
+    });
+
+    // Document Upload & AI Scanner
+    getElements('button', 'Upload File').concat(getElements('button', 'Capture')).forEach(btn => {
+        btn.onclick = (e) => {
+            e.preventDefault();
+            // Trigger file picker or load sample
+            let input = document.getElementById('apply-file-input');
+            if (!input) {
+                input = document.createElement('input');
+                input.type = 'file';
+                input.id = 'apply-file-input';
+                input.className = 'hidden';
+                input.accept = 'image/*,application/pdf';
+                document.body.appendChild(input);
+                input.onchange = async () => {
+                    simulateDocumentScan();
+                };
+            }
+            input.click();
+        };
+    });
+
+    function simulateDocumentScan() {
+        showToast('Running OpenCV Document Quality & Gemini Vision OCR...', 'document_scanner');
+        setTimeout(() => {
+            showToast('AI Pre-Check Passed: Blur 96/100 | SDO Ranchi Seal Detected (99.1%) | Rule 14(b) Dialect Tolerant', 'verified');
+            speakText('Caste certificate verified with ninety-nine percent seal confidence.');
+        }, 800);
+    }
+
+    // Save Draft
+    getElements('button', 'Save Draft').forEach(btn => {
+        btn.onclick = (e) => {
+            e.preventDefault();
+            localStorage.setItem('mota_draft_saved', new Date().toISOString());
+            showToast('Application draft saved securely to local cache.', 'save');
+        };
+    });
+
+    // Final Submission
+    getElements('button', 'Proceed to Final Submission').forEach(btn => {
+        btn.onclick = (e) => {
+            e.preventDefault();
+            btn.innerHTML = `<span class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span> Submitting to MoTA Pipeline...`;
+            setTimeout(() => {
+                showApplicationSuccessModal('MOTA-2025-JH-88391');
+                btn.innerHTML = `Proceed to Final Submission <span class="material-symbols-outlined text-[18px]">arrow_forward</span>`;
+            }, 900);
+        };
+    });
+
+    // Audio Instruction Button
+    getElements('button', 'Listen in Gondi').forEach(btn => {
+        btn.onclick = (e) => {
+            e.preventDefault();
+            speakText("राष्ट्रीय जनजातीय फैलोशिप 2025-26 के लिए अपने सभी विवरण जांचें। जाति प्रमाण पत्र का डिजिटल सत्यापन डिजिलॉकर के माध्यम से हो चुका है।");
+        };
+    });
+}
+
+function showApplicationSuccessModal(refNo) {
+    let modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200';
+    modal.innerHTML = `
+        <div class="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl text-center space-y-4">
+            <div class="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center mx-auto">
+                <span class="material-symbols-outlined text-[36px]">verified</span>
+            </div>
+            <h3 class="font-headline text-xl font-bold text-primary">Fellowship Application Submitted!</h3>
+            <p class="text-xs text-on-surface-variant leading-relaxed">Your application has entered the MoTA SETU Autonomous Scrutiny Pipeline under Scheme Guidelines Rule 14(b).</p>
+            <div class="p-3 bg-surface-container-low rounded-2xl border border-secondary/30 font-mono text-sm font-bold text-primary flex items-center justify-between">
+                <span>Ref: ${refNo}</span>
+                <span class="text-xs text-secondary font-bold">ST-NFST-2025</span>
+            </div>
+            <div class="text-[11px] text-on-surface-variant text-left bg-surface-container p-3 rounded-xl space-y-1">
+                <p>✓ OpenCV Readability: <strong>98.4% (Clear)</strong></p>
+                <p>✓ SDO Tehsildar Seal: <strong>99.1% Confidence</strong></p>
+                <p>✓ Rule 14(b) Exemption: <strong>Phonetic Dialect Guard Active</strong></p>
+                <p>✓ Tamper-Proof Hash: <strong class="font-mono text-[10px]">SHA256: e7f2b1c890a5d4f3</strong></p>
+            </div>
+            <div class="flex items-center gap-2 pt-2">
+                <a href="/track-cure?ref=${refNo}" class="flex-1 py-2.5 bg-primary text-white rounded-xl font-bold text-xs hover:bg-primary/90 transition shadow">Track Application Status</a>
+                <button onclick="this.closest('.fixed').remove()" class="px-4 py-2.5 bg-surface-container text-primary rounded-xl font-bold text-xs hover:bg-surface-container-high transition">Dismiss</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    speakText("Application submitted successfully. Reference number MOTA 2025 JH 88391.");
+}
+
+// ==========================================
+// 7. Officer Scrutiny Console (officer.html)
+// ==========================================
+
+let officerZoom = 1.0;
 let officerHighContrast = false;
+let officerInvert = false;
 
 function initOfficerPage() {
     if (!window.location.pathname.includes('/officer')) return;
 
-    // Document Canvas Controls
-    const canvas = document.getElementById('documentCanvas');
-    const zoomLevel = document.getElementById('zoomLevel');
-    const zoomIn = document.getElementById('zoomInBtn');
-    const zoomOut = document.getElementById('zoomOutBtn');
-    const rotateBtn = document.getElementById('rotateBtn');
-    const contrastBtn = document.getElementById('filterContrastBtn');
+    const viewport = document.getElementById('scan-viewport');
 
-    function applyCanvasTransforms() {
-        if (!canvas) return;
-        let filterStr = officerHighContrast ? 'contrast(160%) brightness(95%) grayscale(20%)' : 'none';
-        canvas.style.transform = `scale(${officerDocScale}) rotate(${officerDocRotation}deg)`;
-        canvas.style.filter = filterStr;
-        if (zoomLevel) zoomLevel.innerText = `${Math.round(officerDocScale * 100)}%`;
+    function applyTransforms() {
+        if (!viewport) return;
+        let filters = [];
+        if (officerHighContrast) filters.push('contrast(180%) brightness(95%)');
+        if (officerInvert) filters.push('invert(100%) hue-rotate(180deg)');
+        viewport.style.filter = filters.length > 0 ? filters.join(' ') : 'none';
+        viewport.style.transform = `scale(${officerZoom})`;
+        viewport.style.transformOrigin = 'top center';
     }
 
-    if (zoomIn) {
-        zoomIn.onclick = () => {
-            if (officerDocScale < 2.0) {
-                officerDocScale += 0.15;
-                applyCanvasTransforms();
-            }
-        };
-    }
-
-    if (zoomOut) {
-        zoomOut.onclick = () => {
-            if (officerDocScale > 0.6) {
-                officerDocScale -= 0.15;
-                applyCanvasTransforms();
-            }
-        };
-    }
-
-    if (rotateBtn) {
-        rotateBtn.onclick = () => {
-            officerDocRotation = (officerDocRotation + 90) % 360;
-            applyCanvasTransforms();
-            showToast(`Rotated to ${officerDocRotation}°`, 'rotate_right');
-        };
-    }
-
-    if (contrastBtn) {
-        contrastBtn.onclick = () => {
+    // High Contrast Button
+    const btnContrast = document.getElementById('toggle-contrast') || getElement('button', 'High Contrast Scan');
+    if (btnContrast) {
+        btnContrast.onclick = (e) => {
+            e.preventDefault();
             officerHighContrast = !officerHighContrast;
-            applyCanvasTransforms();
-            showToast(officerHighContrast ? 'High-contrast forensic filter active' : 'Default view', 'contrast');
+            applyTransforms();
+            showToast(officerHighContrast ? 'Forensic High-Contrast Filter Active' : 'Default Visual Mode', 'contrast');
         };
     }
 
-    // Filter Buttons (Queue tabs)
-    document.querySelectorAll('button').forEach(btn => {
-        const txt = (btn.textContent || '').trim();
-        if (['Pending Scrutiny', 'Rule 14(b)', 'Cured', 'Sanctioned'].some(k => txt.includes(k))) {
-            btn.onclick = () => filterOfficerTable(txt);
+    // Invert Colors Button
+    const btnInvert = document.getElementById('toggle-invert') || getElement('button', 'Invert Negative');
+    if (btnInvert) {
+        btnInvert.onclick = (e) => {
+            e.preventDefault();
+            officerInvert = !officerInvert;
+            applyTransforms();
+            showToast(officerInvert ? 'Inverted Negative Forensic Inspection' : 'Standard Color Scan', 'invert_colors');
+        };
+    }
+
+    // Zoom Buttons: 100%, 125%, 150%
+    getElements('button', '100%').forEach(b => b.onclick = () => { officerZoom = 1.0; applyTransforms(); showToast('Zoom: 100%', 'zoom_in'); });
+    getElements('button', '125%').forEach(b => b.onclick = () => { officerZoom = 1.25; applyTransforms(); showToast('Zoom: 125%', 'zoom_in'); });
+    getElements('button', '150%').forEach(b => b.onclick = () => { officerZoom = 1.5; applyTransforms(); showToast('Zoom: 150%', 'zoom_in'); });
+
+    // Auto-Cure Exemption (GFR Rule 14b) Button
+    getElements('button', 'Apply Auto-Cure Exemption').concat(getElements('button', 'Rule 14b')).forEach(btn => {
+        btn.onclick = async (e) => {
+            e.preventDefault();
+            btn.innerHTML = `<span class="material-symbols-outlined text-[18px] animate-spin">sync</span> Verifying Dialect Phonetics...`;
+            
+            try {
+                const res = await fetch('/api/check-phonetics', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cert_name: "Mangal Saren", matric_name: "Mangal Soren" })
+                });
+                const data = await res.json();
+            } catch (err) {}
+
+            setTimeout(() => {
+                btn.innerHTML = `<span class="material-symbols-outlined text-[18px]">verified</span> Exemption Granted (Rule 14b Cured)`;
+                btn.className = "w-full py-3 px-4 bg-emerald-700 text-white rounded-lg font-bold text-xs flex items-center justify-center gap-2 shadow";
+
+                // Update red mismatch badge to green cured
+                document.querySelectorAll('.text-error, .bg-error\/10').forEach(el => {
+                    if (el.textContent.includes('Mismatch') || el.textContent.includes('Discrepancy')) {
+                        el.className = "text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded font-bold text-xs";
+                        el.innerText = "✓ Cured under Rule 14(b) (96.8% Phonetic Match)";
+                    }
+                });
+
+                showToast('Rule 14(b) Auto-Cure Exemption Applied: Dialectical surname variance reconciled!', 'verified');
+                speakText('Rule 14(b) exemption applied. Scholar is fully eligible for disbursal.');
+            }, 700);
+        };
+    });
+
+    // Approve & Authorize Disbursal Button (Ctrl+Enter)
+    const approveAction = async () => {
+        const btn = getElement('button', 'Approve & Authorize') || getElement('button', 'Approve');
+        if (btn) {
+            btn.innerHTML = `<span class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span> Authorizing DBT Mandate...`;
+        }
+        
+        try {
+            const res = await fetch('/api/officer/approve', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ref_no: 'MOTA-2025-JH-88391', officer_remarks: 'Statutory scrutiny cleared under Rule 14(b)' })
+            });
+            const data = await res.json();
+        } catch (e) {}
+
+        setTimeout(() => {
+            showOfficerDecreeModal('MOTA-2025-JH-88391', 'Mangal Soren');
+            if (btn) {
+                btn.innerHTML = `<span class="material-symbols-outlined text-[18px]">done_all</span> Disbursal Mandate Staged ✓`;
+                btn.className = "w-full py-3.5 px-4 bg-emerald-700 text-white rounded-lg font-bold text-sm flex items-center justify-center gap-2 shadow-lg";
+            }
+        }, 800);
+    };
+
+    getElements('button', 'Approve & Authorize').forEach(b => b.onclick = (e) => { e.preventDefault(); approveAction(); });
+
+    // Keyboard Shortcuts: Ctrl+Enter (Approve), J (Prev), K (Next)
+    document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            approveAction();
+        }
+        if (e.key === 'j' || e.key === 'J') {
+            showToast('Loading Previous Applicant (#MOTA-2025-JH-88391 Mangal Soren)', 'arrow_back');
+        }
+        if (e.key === 'k' || e.key === 'K') {
+            showToast('Loading Next Applicant (#MOTA-2025-OR-77210 Sunita Munda)', 'arrow_forward');
         }
     });
 
-    // Officer Search Filter
-    const searchInput = document.querySelector('header input[placeholder*="Search"], main input[type="text"]');
-    if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
-            const query = e.target.value.toLowerCase();
-            document.querySelectorAll('table tbody tr, .grid > .border').forEach(row => {
-                const text = (row.textContent || '').toLowerCase();
-                row.style.display = text.includes(query) ? '' : 'none';
-            });
-        });
-    }
-
-    // Modal Handlers: Clarify
-    const clarifyBtn = document.getElementById('clarifyBtn');
-    const clarifyModal = document.getElementById('clarifyModal');
-    const sendClarifyBtn = document.getElementById('sendClarifyModal');
-
-    if (clarifyBtn && clarifyModal) {
-        clarifyBtn.onclick = () => clarifyModal.classList.remove('hidden');
-        const closeModals = clarifyModal.querySelectorAll('button');
-        closeModals.forEach(b => {
-            if ((b.textContent || '').includes('Cancel') || (b.textContent || '').includes('close')) {
-                b.onclick = () => clarifyModal.classList.add('hidden');
-            }
-        });
-    }
-
-    if (sendClarifyBtn) {
-        sendClarifyBtn.onclick = async () => {
+    // Direct Scholar Clarification
+    getElements('button', 'Direct Scholar Clarification').forEach(btn => {
+        btn.onclick = async (e) => {
+            e.preventDefault();
             try {
                 await fetch('/api/officer/clarification', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ref_no: 'MOTA-2025-JH-88391', phone: '+91 94311 88201' })
+                    body: JSON.stringify({ ref_no: 'MOTA-2025-JH-88391', phone: '+91 94311•••••' })
                 });
-            } catch (e) {}
-            if (clarifyModal) clarifyModal.classList.add('hidden');
-            showToast('Clarification notice sent to Mangal Soren via SMS & WhatsApp!', 'chat');
+            } catch (err) {}
+            showToast('Direct Clarification link dispatched to Mangal Soren via NIC SMS & WhatsApp Gateway!', 'chat');
+            speakText('Clarification link dispatched to scholar phone number.');
         };
-    }
+    });
 
-    // Modal Handlers: Disqualify
-    const disqualifyBtn = document.getElementById('disqualifyBtn');
-    const disqualifyModal = document.getElementById('disqualifyModal');
-    const confirmDisqualifyBtn = document.getElementById('confirmDisqualifyModal');
-
-    if (disqualifyBtn && disqualifyModal) {
-        disqualifyBtn.onclick = () => disqualifyModal.classList.remove('hidden');
-        disqualifyModal.querySelectorAll('button').forEach(b => {
-            if ((b.textContent || '').includes('Cancel') || (b.textContent || '').includes('close')) {
-                b.onclick = () => disqualifyModal.classList.add('hidden');
-            }
-        });
-    }
-
-    if (confirmDisqualifyBtn) {
-        confirmDisqualifyBtn.onclick = async () => {
-            if (disqualifyModal) disqualifyModal.classList.add('hidden');
-            showToast('Application marked Rejected with Section 7 Statutory Appeal Rights.', 'block');
-        };
-    }
-
-    // Approve Button Handler
-    const approveBtn = document.getElementById('approveBtn');
-    if (approveBtn) {
-        approveBtn.onclick = async () => {
-            try {
-                await fetch('/api/officer/approve', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ref_no: 'MOTA-2025-JH-88391', officer_remarks: 'Statutory scrutiny cleared under Rule 14(b)' })
-                });
-            } catch (e) {}
-            approveBtn.innerHTML = `<span class="material-symbols-outlined text-[20px]">verified</span><span class="font-bold">Sanction Authorized ✓</span>`;
-            approveBtn.className = "flex items-center gap-2 px-6 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md shadow-md";
-            showToast('Application #MOTA-2025-JH-88391 Sanctioned! DBT token queued for RBI e-Kuber.', 'verified');
-        };
-    }
-
-    // Download Section 65B Audit Certificate
-    getElements('button', '65B').concat(getElements('button', 'Audit Certificate')).concat(getElements('button', 'Download Dossier')).forEach(btn => {
+    // Disqualify Claim
+    getElements('button', 'Disqualify Claim').forEach(btn => {
         btn.onclick = (e) => {
             e.preventDefault();
-            generateSection65BCertificate('MOTA-2025-JH-88391', 'Mangal Soren');
+            showToast('Statutory Disqualification Notice Issued with Section 7 Legal Appeal Rights.', 'block');
         };
     });
 
-    // Keyboard navigation (J = Prev, K = Next, Ctrl+Enter = Approve)
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'j' || e.key === 'J') {
-            showToast('Switched to Previous Record: Birsa Munda (Khunti)', 'arrow_back');
-        } else if (e.key === 'k' || e.key === 'K') {
-            showToast('Switched to Next Record: Anjali Kerketta (Sundargarh)', 'arrow_forward');
-        } else if (e.ctrlKey && e.key === 'Enter') {
-            if (approveBtn) approveBtn.click();
-        }
+    // PFMS Live Sync
+    getElements('button', 'PFMS Live Sync').forEach(btn => {
+        btn.onclick = (e) => {
+            e.preventDefault();
+            showToast('PFMS Central Server Sync: 382/382 Bank Mappings Verified.', 'sync');
+        };
     });
 }
 
-function filterOfficerTable(filterText) {
-    showToast(`Filtering scrutiny queue: ${filterText}`, 'filter_list');
-    document.querySelectorAll('table tbody tr').forEach(row => {
-        const text = row.textContent || '';
-        if (filterText.includes('Rule 14(b)') && !text.includes('Rule 14(b)') && !text.includes('Soren')) {
-            row.style.display = 'none';
-        } else if (filterText.includes('Cured') && !text.includes('Cured') && !text.includes('Defect')) {
-            row.style.display = 'none';
-        } else {
-            row.style.display = '';
-        }
-    });
+function showOfficerDecreeModal(refNo, scholarName) {
+    let modal = document.createElement('div');
+    modal.className = 'fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200';
+    modal.innerHTML = `
+        <div class="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-4">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-[28px]">verified_user</span>
+                </div>
+                <div>
+                    <h3 class="font-bold text-base text-primary">Official Ministry Sanction Decree</h3>
+                    <div class="text-xs text-on-surface-variant">Gazetted Disbursal Authorization under NFST Scheme</div>
+                </div>
+            </div>
+            <div class="p-4 bg-surface-container-low rounded-2xl border border-secondary/30 text-xs space-y-2 text-on-surface">
+                <div class="flex justify-between border-b border-outline-variant/40 pb-1.5">
+                    <span class="text-on-surface-variant">Applicant:</span>
+                    <span class="font-bold">${scholarName} (ST Santhal)</span>
+                </div>
+                <div class="flex justify-between border-b border-outline-variant/40 pb-1.5">
+                    <span class="text-on-surface-variant">Reference ID:</span>
+                    <span class="font-mono font-bold text-primary">${refNo}</span>
+                </div>
+                <div class="flex justify-between border-b border-outline-variant/40 pb-1.5">
+                    <span class="text-on-surface-variant">Exemption Applied:</span>
+                    <span class="font-bold text-emerald-600">Rule 14(b) GFR Tribal Dialect</span>
+                </div>
+                <div class="flex justify-between border-b border-outline-variant/40 pb-1.5">
+                    <span class="text-on-surface-variant">DBT Electronic Token:</span>
+                    <span class="font-mono text-[11px] text-primary">DBT-MOTA-2025-JH-88391-9982</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-on-surface-variant">Evidence Hash:</span>
+                    <span class="font-mono text-[10px] text-on-surface-variant">SHA256: 9FA87B21C04D89A1</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-3 pt-2">
+                <a href="/ledger" class="flex-1 py-2.5 bg-primary text-white rounded-xl font-bold text-xs text-center hover:bg-primary/90 transition shadow">View in PFMS Ledger</a>
+                <button onclick="this.closest('.fixed').remove()" class="px-4 py-2.5 bg-surface-container text-primary rounded-xl font-bold text-xs hover:bg-surface-container-high transition">Close</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    speakText(`Scholarship for ${scholarName} sanctioned and queued for DBT transfer.`);
 }
 
-function generateSection65BCertificate(refNo, scholarName) {
-    const timestamp = new Date().toISOString();
-    const shaHash = '9e41b092fcd8812a8492019488bc110a241982410a8b9f109284102948102948';
-    
-    const certText = `================================================================================
-MINISTRY OF TRIBAL AFFAIRS | GOVERNMENT OF INDIA
-CERTIFICATE UNDER SECTION 65B OF THE INDIAN EVIDENCE ACT, 1872
-================================================================================
-Document Identification: MoTA SETU Cryptographic Audit Dossier
-Application Reference Number: ${refNo}
-Scholar Full Name: ${scholarName}
-Tribal Category: Scheduled Tribe (Article 342 Recognized Community)
-Timestamp of Generation: ${timestamp}
+// ==========================================
+// 8. Universal Unhandled Button/Link Interceptor
+// ==========================================
 
-1. SYSTEM INTEGRITY DECLARATION:
-This electronic certificate is produced by the MoTA SETU Autonomous Document
-Scrutiny Engine operating under the authority of the Ministry of Tribal Affairs.
-The system is protected by ISO/IEC 27001 standard security controls and
-cryptographic Hardware Security Module (HSM) signing.
+function initUniversalButtonInterceptor() {
+    document.addEventListener('click', (e) => {
+        const target = e.target.closest('button, a');
+        if (!target) return;
 
-2. STATUTORY SCRUTINY AUDIT TRAIL:
-- DigiLocker National Record Match: 100% (Aadhaar Seeded)
-- Computer Vision Quality Index: Blur Score 89/100 | Contrast Ratio 96/100
-- Statutory Exemption Invoked: Rule 14(b) Phonetic Dialectical Permissibility
-- Issuing Authority Verified: Sub-Divisional Magistrate (SDM), Sadar Ranchi
-- Soundex / Double Metaphone Phonetic Distance: 0.96 (Variance Permissible)
+        const href = target.getAttribute('href');
+        const onclick = target.getAttribute('onclick');
 
-3. CRYPTOGRAPHIC PROOF OF NON-TAMPERING:
-SHA-256 Ledger Hash: ${shaHash}
-Audit Block Sequence: #MOTA-AUDIT-2025-JH-88391-B04
-PFMS DBT Electronic Mandate Route: RBI e-Kuber Real-Time Settlement Engine
-
-Authorized Signatory:
-Designated Scrutiny Officer (Level 2 Sanctioning Authority)
-Ministry of Tribal Affairs, Government of India
-================================================================================`;
-
-    downloadFile(`Section_65B_Certificate_${refNo}.txt`, certText, 'text/plain');
-    showToast(`Section 65B Certificate generated for ${scholarName}!`, 'verified');
-}
-
-// --- D. TRACK & CURE DEFECT PAGE (track-cure.html) ---
-function initTrackCurePage() {
-    if (!window.location.pathname.includes('/track-cure')) return;
-
-    // Check URL parameters (e.g. ?ref=MOTA-2025-OD-10492)
-    const urlParams = new URLSearchParams(window.location.search);
-    const refParam = urlParams.get('ref');
-    if (refParam) {
-        showToast(`Loaded Application: ${refParam}`, 'search');
-    }
-
-    // Audio Play Button Handler
-    const audioBtn = document.getElementById('audio-play-btn');
-    const playIcon = document.getElementById('play-icon');
-    let isPlaying = false;
-
-    if (audioBtn) {
-        audioBtn.onclick = () => {
-            isPlaying = !isPlaying;
-            if (playIcon) playIcon.innerText = isPlaying ? 'pause' : 'play_arrow';
-            if (isPlaying) {
-                speakText('ଧ୍ୟାନ ଦିଅନ୍ତୁ। ଆପଣଙ୍କ ତହସିଲ ମୋହର ଅସ୍ପଷ୍ଟ ଥିବାରୁ ଏହାକୁ ସଂଶୋଧନ କରିବା ପାଇଁ ସ୍ପଷ୍ଟ ଫଟୋ ଅପଲୋଡ କରନ୍ତୁ।', 'or-IN');
-                showToast('Playing Audio Sahayak Voice Guide...', 'volume_up');
+        // Catch broken href="#" clicks that have no custom onclick
+        if (href === '#' && !onclick) {
+            e.preventDefault();
+            const text = target.textContent.trim().toLowerCase();
+            
+            if (text.includes('apply') || text.includes('scholar')) {
+                window.location.href = '/apply';
+            } else if (text.includes('officer') || text.includes('scrutiny') || text.includes('desk')) {
+                window.location.href = '/officer';
+            } else if (text.includes('track') || text.includes('cure')) {
+                window.location.href = '/track-cure';
+            } else if (text.includes('ledger') || text.includes('pfms') || text.includes('dbt')) {
+                window.location.href = '/ledger';
+            } else if (text.includes('analytic')) {
+                window.location.href = '/analytics';
+            } else if (text.includes('sign in') || text.includes('sso') || text.includes('login')) {
+                window.location.href = '/auth';
+            } else if (text.includes('rule 14') || text.includes('guideline') || text.includes('sop')) {
+                showSchemeModal('Rule 14(b) Statutory Dialect SOP');
+            } else if (text.includes('download') || text.includes('export')) {
+                showToast('Generating official MoTA digitally signed Section 65B export...', 'download');
             } else {
-                window.speechSynthesis.cancel();
+                showToast(`Action Triggered: ${target.textContent.trim() || 'MoTA Feature'}`, 'check_circle');
             }
-        };
-    }
-
-    // File Upload / Curing Re-upload
-    const dropzone = document.getElementById('dropzone') || document.querySelector('.border-dashed');
-    if (dropzone) {
-        dropzone.style.cursor = 'pointer';
-        dropzone.onclick = () => {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = 'image/*';
-            input.onchange = (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    showToast(`Uploaded ${file.name}. Enhancing contrast...`, 'auto_fix_high');
-                    const badge = document.getElementById('stamp-status-badge');
-                    if (badge) {
-                        badge.innerText = 'Stamp Legible (99.1% Match)';
-                        badge.className = 'bg-secondary-container text-on-secondary-container font-label-sm text-label-sm px-2 py-0.5 rounded font-bold';
-                    }
-                }
-            };
-            input.click();
-        };
-    }
-}
-
-// Global functions expected by inline handlers in track-cure.html
-window.switchLanguage = function(lang, caption) {
-    const captionEl = document.getElementById('audio-caption');
-    if (captionEl) captionEl.innerText = `Now playing in: ${caption}`;
-    showToast(`Switched voice guide to ${lang}`, 'translate');
-    if (lang === 'Hindi') speakText('तहसीलदार की मुहर का स्पष्ट फोटो अपलोड करें ताकि आपकी छात्रवृत्ति तुरंत स्वीकृत हो सके।', 'hi-IN');
-    else if (lang === 'English') speakText('Please upload a clear photograph of the Tahasildar seal for immediate sanction.', 'en-IN');
-};
-
-window.submitCure = async function() {
-    const banner = document.getElementById('success-banner');
-    if (banner) {
-        banner.classList.remove('hidden');
-        banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-    const cureBtn = document.getElementById('submit-cure-btn');
-    if (cureBtn) {
-        cureBtn.innerText = 'Seal Submitted & Approved ✓';
-        cureBtn.className = 'flex-1 py-3 bg-primary text-on-primary rounded-lg font-bold text-sm';
-        cureBtn.disabled = true;
-    }
-    try {
-        await fetch('/api/cure-defect', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: 'ref_no=MOTA-2025-OD-10492'
-        });
-    } catch (e) {}
-    showToast('Defect Resolved! Application moved to Sanction Queue.', 'verified');
-};
-
-window.sendSMSAlert = function() {
-    showToast('SMS with GPS directions dispatched to scholar mobile (+91 94311 •••••)', 'sms');
-};
-
-// --- E. PFMS LEDGER PAGE (ledger.html) ---
-function initLedgerPage() {
-    if (!window.location.pathname.includes('/ledger')) return;
-
-    // Export Ledger CSV
-    getElements('button', 'Export').concat(getElements('button', 'CSV')).forEach(btn => {
-        btn.onclick = (e) => {
-            e.preventDefault();
-            const csvData = `Batch_ID,Ref_No,Scholar_Name,Scheme,Monthly_Grant_INR,NPCI_Status,RBI_eKuber_ACK,Ledger_Hash\n#MOTA-DBT-2025-11-04-09,MOTA-2025-JH-88391,Mangal Soren,NFST Fellowship,38800,Active/Seeded,ACK-RBI-99410-01,7f8a3b21c44e9901\n#MOTA-DBT-2025-11-04-09,MOTA-2025-OD-10492,Anjali Kerketta,NOS Overseas,34200,Active/Seeded,ACK-RBI-99410-02,9d12c440ea117721\n#MOTA-DBT-2025-11-04-09,MOTA-2025-MP-51204,Birsa Munda,NFST Fellowship,38800,Active/Seeded,ACK-RBI-99410-03,4e31881fb092441a\n#MOTA-DBT-2025-11-04-09,MOTA-2025-RJ-77402,Ramesh Meena,NFST Fellowship,38800,Active/Seeded,ACK-RBI-99410-04,1c8477bae1100234`;
-            downloadFile('MoTA_PFMS_DBT_Ledger_Batch_09.csv', csvData, 'text/csv');
-            showToast('PFMS Ledger exported successfully!', 'download');
-        };
-    });
-
-    // Hash Verification Button
-    getElements('button', 'Verify').forEach(btn => {
-        btn.onclick = () => {
-            showToast('Cryptographic Verification: All 5 Block Hashes Match Genesis Chain (0 Tampering)', 'verified');
-        };
-    });
-
-    // Batch Authorize Button
-    getElements('button', 'Authorize').concat(getElements('button', 'Push to PFMS')).forEach(btn => {
-        btn.onclick = async (e) => {
-            e.preventDefault();
-            try {
-                const res = await fetch('/api/ledger/batch-authorize', { method: 'POST' });
-                const data = await res.json();
-                showToast(data.message || 'Batch authorized via Kavach 2FA!', 'verified');
-            } catch (err) {
-                showToast('Batch #MOTA-DBT-2025-11-04-09 authorized via Kavach 2FA. Electronic mandate pushed to RBI e-Kuber & PFMS!', 'verified');
-            }
-        };
-    });
-}
-
-// --- F. EXECUTIVE ANALYTICS (analytics.html) ---
-function initAnalyticsPage() {
-    if (!window.location.pathname.includes('/analytics')) return;
-
-    // Filter Chips
-    getElements('button', 'All States').concat(getElements('button', 'PVTG')).concat(getElements('button', 'Aspirational')).forEach(chip => {
-        chip.onclick = () => {
-            showToast(`Applied Matrix Filter: ${chip.textContent.trim()}`, 'insights');
-        };
-    });
-
-    // Download National Report
-    getElements('button', 'Download National Report').concat(getElements('button', 'Export')).forEach(btn => {
-        btn.onclick = (e) => {
-            e.preventDefault();
-            const report = `MINISTRY OF TRIBAL AFFAIRS - NATIONAL EXECUTIVE SCHOLARSHIP AUDIT REPORT\nFiscal Year: 2025-26\nTotal Staged: INR 480.65 Cr\nScholars Credited: 42,410\nRejection Prevention Rate: 96.8% (Saved from Rejection: 3,890 Scholars)\nAI OCR Precision: 98.4%\nCompliant with Rule 14(b) & Section 65B Indian Evidence Act`;
-            downloadFile('MoTA_National_Executive_Report_2025-26.txt', report, 'text/plain');
-            showToast('National Executive Report downloaded!', 'download');
-        };
+        }
     });
 }
 
 // ==========================================
-// 5. Bootstrap Engine on DOMContentLoaded
+// 9. Bootstrap Engine on DOMContentLoaded
 // ==========================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    initRolloutSahayak();
     initGlobalHeader();
+    initAuthPage();
     initLandingPage();
     initApplyPage();
     initOfficerPage();
-    initTrackCurePage();
-    initLedgerPage();
-    initAnalyticsPage();
+    initUniversalButtonInterceptor();
 });
