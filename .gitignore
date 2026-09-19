@@ -1,0 +1,22 @@
+# Python & Virtual Environments
+.venv/
+venv/
+ENV/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Private Environment & API Keys (Crucial for Security!)
+.env
+backend/.env
+*.local
+
+# Database (Auto-generated on startup by database.py)
+*.db
+backend/*.db
+
+# OS & Editor generated
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
