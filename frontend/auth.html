@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>MoTA SETU | Secure Single Sign-On & Verification Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700&family=Noto+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <style>
+        @layer base {
+            html, body { margin: 0; padding: 0; }
+            body { overscroll-behavior: none; }
+        }
+        ::-webkit-scrollbar { display: none; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.94);
+            backdrop-filter: blur(12px);
+        }
+    </style>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#00153d",
+                        "primary-container": "#0f2a5c",
+                        "on-primary": "#ffffff",
+                        "on-primary-container": "#7c93cb",
+                        "secondary": "#006a63",
+                        "secondary-container": "#99efe5",
+                        "on-secondary": "#ffffff",
+                        "on-secondary-container": "#006f67",
+                        "surface": "#faf8ff",
+                        "surface-container-low": "#f2f3ff",
+                        "surface-container": "#eaedff",
+                        "surface-container-high": "#e2e7ff",
+                        "surface-container-lowest": "#ffffff",
+                        "on-surface": "#131b2e",
+                        "on-surface-variant": "#44464f",
+                        "outline": "#757780",
+                        "outline-variant": "#c5c6d1",
+                        "error": "#ba1a1a"
+                    },
+                    fontFamily: {
+                        "headline": ["Public Sans", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"]
+                    }
+                }
+            }
+        };
+    </script>
+</head>
+<body class="bg-surface font-body text-on-surface min-h-screen flex flex-col justify-between">
+
+    <!-- Top Government Masthead -->
+    <header class="fixed top-0 w-full z-40 shadow-sm">
+        <div class="bg-primary text-on-primary py-1 px-4 sm:px-8 text-xs font-semibold">
+            <div class="max-w-7xl mx-auto flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <img src="/assets/logo.svg" alt="Emblem" class="h-4 w-auto"/>
+                    <span>Government of India | Ministry of Tribal Affairs (जनजातीय कार्य मंत्रालय)</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span class="hidden sm:inline">National Single Sign-On (MeriPehchaan & DigiLocker)</span>
+                    <div class="flex items-center gap-1">
+                        <span class="hover:underline cursor-pointer">EN</span>|
+                        <span class="hover:underline cursor-pointer">हिन्दी</span>|
+                        <span class="hover:underline cursor-pointer">संथाली</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-surface-container-lowest/95 backdrop-blur-md border-b border-outline-variant/30">
+            <div class="h-16 max-w-7xl mx-auto px-4 sm:px-8 flex items-center justify-between">
+                <a href="/" class="flex items-center gap-3">
+                    <img alt="MoTA SETU Logo" class="h-9 w-auto object-contain" src="/assets/logo.svg"/>
+                    <div>
+                        <span class="font-headline font-bold text-primary text-lg tracking-tight block leading-none">MoTA SETU</span>
+                        <span class="text-[11px] text-on-surface-variant block">Tribal Scholarship & Fellowship Verification Portal</span>
+                    </div>
+                </a>
+                <nav class="hidden md:flex items-center gap-6 text-sm font-semibold">
+                    <a href="/" class="text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[18px]">home</span> Home
+                    </a>
+                    <a href="/apply" class="text-on-surface-variant hover:text-primary transition-colors">Apply Portal</a>
+                    <a href="/track-cure" class="text-on-surface-variant hover:text-primary transition-colors">Track Defect</a>
+                    <a href="/officer" class="text-on-surface-variant hover:text-primary transition-colors">Officer Desk</a>
+                    <a href="/ledger" class="text-on-surface-variant hover:text-primary transition-colors">PFMS Ledger</a>
+                </nav>
+                <div class="flex items-center gap-2">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-secondary/10 text-secondary border border-secondary/20">
+                        <span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+                        ISO 27001 / HSM Secured
+                    </span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="pt-28 pb-16 px-4 sm:px-6 max-w-5xl mx-auto w-full flex-1 flex flex-col justify-center">
+        
+        <!-- Header Title -->
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-container/10 text-primary-container font-semibold text-xs mb-2">
+                <span class="material-symbols-outlined text-[16px]">verified_user</span>
+                Statutory Human-in-the-Loop Authentication Framework
+            </div>
+            <h1 class="font-headline text-2xl sm:text-3xl font-bold text-primary">Unified Identity & Access Gateway</h1>
+            <p class="text-sm text-on-surface-variant max-w-2xl mx-auto mt-1">
+                Zero password friction. Authentic, Aadhaar-seeded authentication for tribal scholars, and MeriPehchaan (Parichay) RBAC console for gazetted desk officers.
+            </p>
+        </div>
+
+        <!-- Role Toggle Tabs -->
+        <div class="flex justify-center mb-8">
+            <div class="inline-flex p-1.5 bg-surface-container rounded-2xl border border-outline-variant/30 shadow-inner">
+                <button id="tab-student" onclick="switchAuthTab('student')" class="flex items-center gap-2 px-6 py-2.5 rounded-xl font-headline font-semibold text-sm transition-all duration-200 bg-primary text-on-primary shadow-sm">
+                    <span class="material-symbols-outlined text-[20px]">school</span>
+                    Tribal Scholar / Student (विद्यार्थी)
+                </button>
+                <button id="tab-officer" onclick="switchAuthTab('officer')" class="flex items-center gap-2 px-6 py-2.5 rounded-xl font-headline font-semibold text-sm transition-all duration-200 text-on-surface-variant hover:text-primary">
+                    <span class="material-symbols-outlined text-[20px]">shield_person</span>
+                    Ministry Desk Officer (सत्यापन अधिकारी)
+                </button>
+            </div>
+        </div>
+
+        <!-- AUTH BOX -->
+        <div class="glass-card border border-outline-variant/30 rounded-3xl p-6 sm:p-10 shadow-xl relative overflow-hidden">
+            
+            <!-- Student Authentication Pane -->
+            <div id="pane-student" class="space-y-6">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-outline-variant/20">
+                    <div>
+                        <h2 class="font-headline text-lg font-bold text-primary flex items-center gap-2">
+                            <span>Scholar Login & DigiLocker Instant Onboarding</span>
+                            <span class="text-xs font-normal px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container font-semibold">1-Click Fast Sync</span>
+                        </h2>
+                        <p class="text-xs text-on-surface-variant mt-0.5">
+                            Pull pre-verified Aadhaar, Domicile, and Caste certificates straight from DigiLocker without manual paper uploads.
+                        </p>
+                    </div>
+                    <button onclick="speakText('नमस्ते प्रिय छात्र! अपने डिजीलॉकर या आधार नंबर से लॉगिन करें। यदि समस्या हो तो एक क्लिक डेमो बटन दबाएं।', 'hi-IN')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container text-xs font-semibold text-primary hover:bg-surface-container-high transition">
+                        <span class="material-symbols-outlined text-[16px] text-secondary">volume_up</span>
+                        <span>Voice Guide (आवाज से सुनें)</span>
+                    </button>
+                </div>
+
+                <!-- 1-Click DigiLocker Demo Connect Banner -->
+                <div class="bg-gradient-to-r from-secondary/10 via-primary-container/10 to-secondary/10 border border-secondary/30 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-xl bg-secondary text-on-secondary flex items-center justify-center flex-shrink-0 shadow-md">
+                            <span class="material-symbols-outlined text-[26px]">folder_shared</span>
+                        </div>
+                        <div>
+                            <p class="font-headline text-sm font-bold text-primary">Pre-Filled Hackathon Demo Profile</p>
+                            <p class="text-xs text-on-surface-variant">Instant load verified identity of <strong>Birsa Munda (Khunti, Jharkhand)</strong> or <strong>Mangal Soren</strong>.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="quickFillStudent('Birsa Munda', 'Munda', 'Jharkhand', '8821')" class="px-4 py-2 bg-secondary text-on-secondary rounded-xl text-xs font-bold hover:bg-secondary/90 transition shadow-sm flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-[16px]">bolt</span> 1-Click Load Birsa
+                        </button>
+                        <button onclick="quickFillStudent('Mangal Soren', 'Santhal', 'Jharkhand', '9104')" class="px-3 py-2 bg-surface-container-high text-primary rounded-xl text-xs font-bold hover:bg-surface-container transition">
+                            Load Mangal
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Form Fields -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div>
+                        <label class="block text-xs font-bold text-on-surface mb-1">Scholar Full Name (as on Aadhaar / Matriculation)</label>
+                        <div class="relative">
+                            <span class="material-symbols-outlined absolute left-3 top-2.5 text-outline text-[18px]">badge</span>
+                            <input id="student-name" type="text" placeholder="e.g. Birsa Munda" value="Birsa Munda" class="w-full bg-surface-container-low border border-outline-variant/50 rounded-xl pl-10 pr-3 py-2 text-sm text-on-surface outline-none focus:border-secondary focus:ring-1 focus:ring-secondary"/>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-on-surface mb-1">Aadhaar Number / Virtual ID (VID)</label>
+                        <div class="relative">
+                            <span class="material-symbols-outlined absolute left-3 top-2.5 text-outline text-[18px]">fingerprint</span>
+                            <input id="student-aadhaar" type="text" placeholder="XXXX-XXXX-8821" value="XXXX-XXXX-8821" class="w-full bg-surface-container-low border border-outline-variant/50 rounded-xl pl-10 pr-3 py-2 text-sm text-on-surface outline-none focus:border-secondary focus:ring-1 focus:ring-secondary font-mono"/>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-on-surface mb-1">Recognized Scheduled Tribe Community</label>
+                        <div class="relative">
+                            <span class="material-symbols-outlined absolute left-3 top-2.5 text-outline text-[18px]">diversity_3</span>
+                            <select id="student-tribe" class="w-full bg-surface-container-low border border-outline-variant/50 rounded-xl pl-10 pr-3 py-2 text-sm text-on-surface outline-none focus:border-secondary focus:ring-1 focus:ring-secondary appearance-none">
+                                <option value="Munda">Munda (Particularly Vulnerable / General ST)</option>
+                                <option value="Santhal">Santhal</option>
+                                <option value="Oraon">Oraon (Kurukh)</option>
+                                <option value="Bhil">Bhil</option>
+                                <option value="Gond">Gond</option>
+                                <option value="Bodo">Bodo</option>
+                                <option value="Meena">Meena</option>
+                                <option value="Birhor">Birhor (PVTG - Priority 1)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-on-surface mb-1">Domicile State & ITDA District</label>
+                        <div class="relative">
+                            <span class="material-symbols-outlined absolute left-3 top-2.5 text-outline text-[18px]">location_on</span>
+                            <input id="student-state" type="text" placeholder="e.g. Khunti, Jharkhand" value="Khunti, Jharkhand" class="w-full bg-surface-container-low border border-outline-variant/50 rounded-xl pl-10 pr-3 py-2 text-sm text-on-surface outline-none focus:border-secondary focus:ring-1 focus:ring-secondary"/>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- OTP Section -->
+                <div class="p-4 bg-surface-container-low rounded-2xl border border-outline-variant/30 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-secondary text-[24px]">sms</span>
+                        <div>
+                            <p class="text-xs font-bold text-primary">Simulated Aadhaar Mobile OTP</p>
+                            <p class="text-[11px] text-on-surface-variant">Instant OTP sent to Aadhaar-linked mobile: +91 94311 •••••</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 w-full sm:w-auto">
+                        <input id="student-otp" type="text" maxlength="6" value="123456" class="w-32 bg-surface-container-lowest border border-secondary text-center font-mono font-bold text-base py-1.5 rounded-xl text-primary tracking-widest outline-none"/>
+                        <button onclick="document.getElementById('student-otp').value='123456'; showNotification('Demo OTP 123456 filled!');" class="text-xs font-semibold text-secondary hover:underline whitespace-nowrap">
+                            Fill Demo OTP
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex flex-col sm:flex-row items-center gap-3 pt-2">
+                    <button onclick="loginStudent('apply')" class="w-full sm:flex-1 py-3 px-6 bg-primary text-on-primary rounded-xl font-headline font-bold text-sm hover:bg-primary-container transition shadow-md flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-[20px]">how_to_reg</span>
+                        <span>Sign In & Open Application Form</span>
+                    </button>
+                    <button onclick="loginStudent('track')" class="w-full sm:w-auto py-3 px-6 bg-surface-container text-primary rounded-xl font-headline font-bold text-sm hover:bg-surface-container-high transition border border-outline-variant/30 flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-[20px]">track_changes</span>
+                        <span>Track My Application</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Officer Authentication Pane -->
+            <div id="pane-officer" class="space-y-6 hidden">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-outline-variant/20">
+                    <div>
+                        <h2 class="font-headline text-lg font-bold text-primary flex items-center gap-2">
+                            <span>MeriPehchaan (National SSO) / Parichay Gateway</span>
+                            <span class="text-xs font-normal px-2 py-0.5 rounded bg-primary-container text-on-primary-container font-semibold">NIC GovCloud</span>
+                        </h2>
+                        <p class="text-xs text-on-surface-variant mt-0.5">
+                            Restricted to Gazetted Nodal Officers, State Tribal Welfare Secretaries, and Tehsil Scrutiny Desks.
+                        </p>
+                    </div>
+                    <span class="inline-flex items-center gap-1 text-xs font-bold text-secondary bg-secondary/10 px-3 py-1 rounded-lg">
+                        <span class="material-symbols-outlined text-[16px]">lock</span>
+                        Kavach 2FA Enforced
+                    </span>
+                </div>
+
+                <!-- Quick Officer Role Pick -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div onclick="selectOfficerRole(this, 'L1_VERIFIER', 'Shri R. K. Soren', 'soren.rk@nic.in', 'Sadar Tehsil, Ranchi')" class="role-card border-2 border-secondary bg-secondary/5 rounded-2xl p-3.5 cursor-pointer transition-all hover:shadow-md">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs font-bold text-secondary">Level 1 Verifier</span>
+                            <span class="material-symbols-outlined text-secondary text-[18px]">radio_button_checked</span>
+                        </div>
+                        <p class="text-xs font-semibold text-primary">Tehsil Scrutiny Desk</p>
+                        <p class="text-[11px] text-on-surface-variant">Phonetic & seal validation</p>
+                    </div>
+
+                    <div onclick="selectOfficerRole(this, 'L2_SANCTION', 'Smt. P. Tripathy', 'tripathy.p@gov.in', 'State Tribal Directorate')" class="role-card border border-outline-variant/40 bg-surface-container-low rounded-2xl p-3.5 cursor-pointer transition-all hover:border-secondary">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs font-bold text-on-surface-variant">Level 2 Sanction</span>
+                            <span class="material-symbols-outlined text-outline text-[18px]">radio_button_unchecked</span>
+                        </div>
+                        <p class="text-xs font-semibold text-primary">Sanctioning Authority</p>
+                        <p class="text-[11px] text-on-surface-variant">Statutory human sanction</p>
+                    </div>
+
+                    <div onclick="selectOfficerRole(this, 'SNO_TREASURY', 'Dr. Alok Verma, IAS', 'alok.verma@nic.in', 'Ministry of Tribal Affairs HQ')" class="role-card border border-outline-variant/40 bg-surface-container-low rounded-2xl p-3.5 cursor-pointer transition-all hover:border-secondary">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs font-bold text-on-surface-variant">State Nodal / MoTA</span>
+                            <span class="material-symbols-outlined text-outline text-[18px]">radio_button_unchecked</span>
+                        </div>
+                        <p class="text-xs font-semibold text-primary">PFMS e-Kuber Desk</p>
+                        <p class="text-[11px] text-on-surface-variant">Electronic mandate release</p>
+                    </div>
+                </div>
+
+                <!-- Form Fields -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div>
+                        <label class="block text-xs font-bold text-on-surface mb-1">Officer Government Email ID (@nic.in / @gov.in)</label>
+                        <div class="relative">
+                            <span class="material-symbols-outlined absolute left-3 top-2.5 text-outline text-[18px]">alternate_email</span>
+                            <input id="officer-email" type="email" value="soren.rk@nic.in" class="w-full bg-surface-container-low border border-outline-variant/50 rounded-xl pl-10 pr-3 py-2 text-sm text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary font-mono"/>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-on-surface mb-1">Designation & Official Desk</label>
+                        <div class="relative">
+                            <span class="material-symbols-outlined absolute left-3 top-2.5 text-outline text-[18px]">account_balance</span>
+                            <input id="officer-desk" type="text" value="Assistant Scrutiny Officer, Ranchi" class="w-full bg-surface-container-low border border-outline-variant/50 rounded-xl pl-10 pr-3 py-2 text-sm text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary"/>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Kavach 2FA Token Card -->
+                <div class="p-4 bg-primary-container text-on-primary rounded-2xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center border border-on-primary-container/40">
+                            <span class="material-symbols-outlined text-on-primary text-[20px]">security</span>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold tracking-wide">NIC Kavach Dynamic Multi-Factor Token</p>
+                            <p class="text-[11px] text-on-primary-container">Time-based One-Time Token (TOTP) valid for 30 seconds</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="text-right">
+                            <span id="kavach-token" class="font-mono text-xl font-bold tracking-widest text-secondary-container">849 201</span>
+                            <div class="w-24 bg-primary h-1 rounded-full overflow-hidden mt-1">
+                                <div id="kavach-progress" class="bg-secondary-container h-full w-3/4 transition-all duration-1000"></div>
+                            </div>
+                        </div>
+                        <button onclick="regenerateKavachToken()" title="Refresh Token" class="p-2 rounded-xl bg-primary hover:bg-surface-container-lowest/10 transition">
+                            <span class="material-symbols-outlined text-[18px]">refresh</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex flex-col sm:flex-row items-center gap-3 pt-2">
+                    <button onclick="loginOfficer('officer')" class="w-full sm:flex-1 py-3 px-6 bg-primary text-on-primary rounded-xl font-headline font-bold text-sm hover:bg-primary-container transition shadow-md flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-[20px]">gavel</span>
+                        <span>Authorize Access to Officer Scrutiny Console</span>
+                    </button>
+                    <button onclick="loginOfficer('ledger')" class="w-full sm:w-auto py-3 px-6 bg-surface-container text-primary rounded-xl font-headline font-bold text-sm hover:bg-surface-container-high transition border border-outline-variant/30 flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-[20px]">receipt_long</span>
+                        <span>Open PFMS Ledger Desk</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statutory Compliance Badges -->
+        <div class="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+            <div class="p-3 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 flex items-center gap-3">
+                <span class="material-symbols-outlined text-secondary text-[22px]">gavel</span>
+                <div class="text-left">
+                    <p class="text-xs font-bold text-primary">Rule 14(b) Human Prerogative</p>
+                    <p class="text-[11px] text-on-surface-variant">AI cannot reject; only desk officers sanction.</p>
+                </div>
+            </div>
+            <div class="p-3 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 flex items-center gap-3">
+                <span class="material-symbols-outlined text-primary text-[22px]">fingerprint</span>
+                <div class="text-left">
+                    <p class="text-xs font-bold text-primary">Zero Biometric Storage</p>
+                    <p class="text-[11px] text-on-surface-variant">Aadhaar masked per UIDAI Circular 2024.</p>
+                </div>
+            </div>
+            <div class="p-3 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 flex items-center gap-3">
+                <span class="material-symbols-outlined text-secondary text-[22px]">enhanced_encryption</span>
+                <div class="text-left">
+                    <p class="text-xs font-bold text-primary">Section 65B Audit Trail</p>
+                    <p class="text-[11px] text-on-surface-variant">Cryptographic evidence logs for every login.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Notification Toast Popup -->
+    <div id="toast-popup" class="fixed bottom-24 left-1/2 -translate-x-1/2 bg-primary text-on-primary px-5 py-2.5 rounded-full text-xs font-bold shadow-2xl z-50 flex items-center gap-2 hidden transition-all duration-300">
+        <span class="material-symbols-outlined text-[18px] text-secondary-container">check_circle</span>
+        <span id="toast-message">Notification</span>
+    </div>
+
+    <!-- Footer -->
+    <footer class="w-full bg-surface-container-low py-6 border-t border-outline-variant/30 text-center text-xs text-on-surface-variant">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <p>© 2025 Ministry of Tribal Affairs, Government of India. All Rights Reserved.</p>
+            <p>Designed, Developed & Maintained with NIC & Smart India Hackathon 2026 Team Builders</p>
+        </div>
+    </footer>
+
+    <!-- Rollout Circular AI Sahayak FAB & Interactive Chat Drawer -->
+    <div id="sahayak-root"></div>
+
+    <script src="/js/app.js"></script>
+    <script>
+        function switchAuthTab(role) {
+            const btnStudent = document.getElementById('tab-student');
+            const btnOfficer = document.getElementById('tab-officer');
+            const paneStudent = document.getElementById('pane-student');
+            const paneOfficer = document.getElementById('pane-officer');
+
+            if (role === 'student') {
+                btnStudent.className = "flex items-center gap-2 px-6 py-2.5 rounded-xl font-headline font-semibold text-sm transition-all duration-200 bg-primary text-on-primary shadow-sm";
+                btnOfficer.className = "flex items-center gap-2 px-6 py-2.5 rounded-xl font-headline font-semibold text-sm transition-all duration-200 text-on-surface-variant hover:text-primary";
+                paneStudent.classList.remove('hidden');
+                paneOfficer.classList.add('hidden');
+            } else {
+                btnOfficer.className = "flex items-center gap-2 px-6 py-2.5 rounded-xl font-headline font-semibold text-sm transition-all duration-200 bg-primary text-on-primary shadow-sm";
+                btnStudent.className = "flex items-center gap-2 px-6 py-2.5 rounded-xl font-headline font-semibold text-sm transition-all duration-200 text-on-surface-variant hover:text-primary";
+                paneOfficer.classList.remove('hidden');
+                paneStudent.classList.add('hidden');
+            }
+        }
+
+        function quickFillStudent(name, tribe, state, aadhaarLast4) {
+            document.getElementById('student-name').value = name;
+            document.getElementById('student-tribe').value = tribe;
+            document.getElementById('student-state').value = state;
+            document.getElementById('student-aadhaar').value = `XXXX-XXXX-${aadhaarLast4}`;
+            document.getElementById('student-otp').value = "123456";
+            showNotification(`DigiLocker Synced: Profile loaded for ${name} (${tribe})`);
+        }
+
+        function selectOfficerRole(card, roleCode, name, email, desk) {
+            document.querySelectorAll('.role-card').forEach(c => {
+                c.className = "role-card border border-outline-variant/40 bg-surface-container-low rounded-2xl p-3.5 cursor-pointer transition-all hover:border-secondary";
+                const icon = c.querySelector('.material-symbols-outlined');
+                if (icon) {
+                    icon.innerText = "radio_button_unchecked";
+                    icon.className = "material-symbols-outlined text-outline text-[18px]";
+                }
+            });
+            card.className = "role-card border-2 border-secondary bg-secondary/5 rounded-2xl p-3.5 cursor-pointer transition-all hover:shadow-md";
+            const curIcon = card.querySelector('.material-symbols-outlined');
+            if (curIcon) {
+                curIcon.innerText = "radio_button_checked";
+                curIcon.className = "material-symbols-outlined text-secondary text-[18px]";
+            }
+            document.getElementById('officer-email').value = email;
+            document.getElementById('officer-desk').value = `${name} | ${desk}`;
+            showNotification(`Officer Role Selected: ${roleCode}`);
+        }
+
+        function regenerateKavachToken() {
+            const code = Math.floor(100000 + Math.random() * 900000).toString();
+            const formatted = `${code.slice(0,3)} ${code.slice(3)}`;
+            document.getElementById('kavach-token').innerText = formatted;
+            showNotification(`New Kavach 2FA Generated: ${formatted}`);
+        }
+
+        function loginStudent(target) {
+            const name = document.getElementById('student-name').value || "Birsa Munda";
+            localStorage.setItem('mota_user_role', 'student');
+            localStorage.setItem('mota_user_name', name);
+            showNotification(`Welcome ${name}! Authenticated via DigiLocker.`);
+            setTimeout(() => {
+                window.location.href = target === 'track' ? '/track-cure' : '/apply';
+            }, 700);
+        }
+
+        function loginOfficer(target) {
+            const email = document.getElementById('officer-email').value || "desk@nic.in";
+            localStorage.setItem('mota_user_role', 'officer');
+            localStorage.setItem('mota_officer_email', email);
+            showNotification(`Access Granted for ${email}. Redirecting to desk...`);
+            setTimeout(() => {
+                window.location.href = target === 'ledger' ? '/ledger' : '/officer';
+            }, 700);
+        }
+
+        function showNotification(msg) {
+            const toast = document.getElementById('toast-popup');
+            const toastMsg = document.getElementById('toast-message');
+            if (toast && toastMsg) {
+                toastMsg.innerText = msg;
+                toast.classList.remove('hidden');
+                setTimeout(() => toast.classList.add('hidden'), 3000);
+            }
+        }
+
+        // Live TOTP animation timer
+        setInterval(() => {
+            const bar = document.getElementById('kavach-progress');
+            if (bar) {
+                const now = new Date();
+                const sec = now.getSeconds() % 30;
+                const pct = ((30 - sec) / 30) * 100;
+                bar.style.width = `${pct}%`;
+                if (sec === 0) regenerateKavachToken();
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
