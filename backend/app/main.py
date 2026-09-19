@@ -17,11 +17,18 @@ from pydantic import BaseModel
 # Add current directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.database import get_db, init_db, log_audit
-from app.services.cv_analyzer import analyze_document_quality
-from app.services.gemini_ocr import extract_certificate_entities
-from app.services.phonetic import check_tribal_phonetics
-from app.services.rules_engine import verify_statutory_eligibility
+try:
+    from app.database import get_db, init_db, log_audit
+    from app.services.cv_analyzer import analyze_document_quality
+    from app.services.gemini_ocr import extract_certificate_entities
+    from app.services.phonetic import check_tribal_phonetics
+    from app.services.rules_engine import verify_statutory_eligibility
+except ImportError:
+    from backend.app.database import get_db, init_db, log_audit
+    from backend.app.services.cv_analyzer import analyze_document_quality
+    from backend.app.services.gemini_ocr import extract_certificate_entities
+    from backend.app.services.phonetic import check_tribal_phonetics
+    from backend.app.services.rules_engine import verify_statutory_eligibility
 
 app = FastAPI(
     title="MoTA SETU Tribal Welfare Engine",
