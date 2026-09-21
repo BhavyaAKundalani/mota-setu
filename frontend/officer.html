@@ -708,75 +708,7 @@
 
 </div>
 
-<!-- Floating AI Sahayak / May I Help You? Trigger & Expandable Dialog -->
 
-
-
-<button class="text-on-surface-variant hover:text-on-surface p-1" id="close-sahayak" type="button">
-
-<span class="material-symbols-outlined text-[18px]">close</span>
-
-</button>
-
-</div>
-
-<div class="py-3 text-on-surface font-body-sm text-body-sm space-y-2">
-
-<div class="p-2.5 bg-surface-container-low rounded-lg">
-
-<p class="font-semibold text-primary">Precedent Query:</p>
-
-<p class="text-on-surface-variant text-[13px] mt-1">Rule 14(b) allows phonetically interchangeable Santhali vowel-consonant shifts across Devnagari and Ol Chiki transliterations into English matriculation databases.</p>
-
-</div>
-
-<div class="flex flex-col gap-1.5 pt-1">
-
-<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Instant Prompts:</span>
-
-<button class="w-full text-left px-3 py-2 bg-surface-container hover:bg-surface-container-high rounded-lg text-primary font-label-sm text-label-sm flex items-center justify-between" id="prompt-rule14" type="button">
-
-<span>Explain Rule 14(b) precedent</span>
-
-<span class="material-symbols-outlined text-[14px]">arrow_outward</span>
-
-</button>
-
-<button class="w-full text-left px-3 py-2 bg-surface-container hover:bg-surface-container-high rounded-lg text-primary font-label-sm text-label-sm flex items-center justify-between" type="button">
-
-<span>Check Santhal Clan Totem list</span>
-
-<span class="material-symbols-outlined text-[14px]">arrow_outward</span>
-
-</button>
-
-</div>
-
-</div>
-
-</div>
-
-<!-- The FAB Trigger Button -->
-
-<button class="bg-primary text-on-primary hover:bg-primary-container px-4 py-3 rounded-full shadow-xl flex items-center gap-3 transition-all transform hover:scale-105" id="toggle-sahayak" title="Press Alt+H for voice/text assistance" type="button">
-
-<span class="relative flex h-3 w-3">
-
-<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span>
-
-<span class="relative inline-flex rounded-full h-3 w-3 bg-secondary"></span>
-
-</span>
-
-<span class="font-label-md text-label-md font-bold tracking-wide">AI Sahayak / May I Help You?</span>
-
-<span class="material-symbols-outlined text-[20px]">chat_spark</span>
-
-</button>
-
-</div>
-
-</div>
 
 <script>
 
@@ -931,37 +863,11 @@
 
 
   // AI Sahayak Toggle
-
-  const toggleBtn = document.getElementById('toggle-sahayak');
-
-  const dialog = document.getElementById('ai-sahayak-dialog');
-
-  const closeBtn = document.getElementById('close-sahayak');
-
   const promptRule14 = document.getElementById('prompt-rule14');
-
-
-
-  toggleBtn?.addEventListener('click', () => {
-
-    dialog.classList.toggle('hidden');
-
-  });
-
-
-
-  closeBtn?.addEventListener('click', () => {
-
-    dialog.classList.add('hidden');
-
-  });
-
-
-
   promptRule14?.addEventListener('click', () => {
-
-    alert("AI Sahayak: MoTA Notification 2022/ST-4 reaffirms that patronymic suffixes in Chota Nagpur divisions (Soren, Saren, Shoren) represent the same clan lineage and cannot be used as grounds for scholastic withholding.");
-
+    if (typeof askSahayakQuick === 'function') {
+      askSahayakQuick('Explain Rule 14(b) precedent');
+    }
   });
 
 

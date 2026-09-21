@@ -594,73 +594,7 @@
 
 </div>
 
-<!-- Floating AI Sahayak / May I Help You? Trigger -->
 
-<div class="fixed bottom-6 right-6 z-30">
-
-<button aria-label="AI Sahayak Help Desk Trigger" class="flex items-center gap-space-sm px-space-md py-3 rounded-full bg-primary text-on-primary shadow-xl hover:bg-primary-container transition-all" onclick="toggleSahayakToast()">
-
-<div class="relative flex items-center justify-center">
-
-<span class="w-2.5 h-2.5 rounded-full bg-secondary-fixed"></span>
-
-<span class="absolute w-4 h-4 rounded-full bg-secondary-fixed/50 animate-ping"></span>
-
-</div>
-
-<span class="font-label-md text-label-md">AI Sahayak / May I Help You?</span>
-
-<span class="text-body-sm opacity-75 font-body-sm">(Alt+H)</span>
-
-</button>
-
-</div>
-
-<!-- Interactive AI Sahayak Mini Toast Modal (Hidden by default) -->
-
-<div class="hidden fixed bottom-20 right-6 z-30 w-80 bg-surface-container-lowest rounded-xl shadow-xl p-space-md animate-fade-in" id="sahayakToast" style="border: 1px solid #757780;">
-
-<div class="flex items-center justify-between mb-2">
-
-<div class="flex items-center gap-2">
-
-<span class="material-symbols-outlined text-secondary">smart_toy</span>
-
-<span class="font-label-md text-label-md text-primary">MoTA AI Sahayak</span>
-
-</div>
-
-<button class="text-outline hover:text-on-surface" onclick="toggleSahayakToast()">
-
-<span class="material-symbols-outlined text-[18px]">close</span>
-
-</button>
-
-</div>
-
-<p class="font-body-sm text-body-sm text-on-surface mb-3">
-
-        नमस्ते! How may I assist your scholarship login today? You can speak in your native dialect or ask about DigiLocker sync.
-
-      </p>
-
-<div class="flex flex-col gap-1.5">
-
-<button class="text-left text-label-sm font-label-sm px-2 py-1.5 bg-surface-container rounded hover:bg-surface-variant text-on-surface">
-
-          🔊 "How to link Aadhaar with phone?"
-
-        </button>
-
-<button class="text-left text-label-sm font-label-sm px-2 py-1.5 bg-surface-container rounded hover:bg-surface-variant text-on-surface">
-
-          📄 "Can I use Offline Caste Certificate?"
-
-        </button>
-
-</div>
-
-</div>
 
 </div>
 
@@ -727,11 +661,7 @@
 
 
   function toggleSahayakToast() {
-
-    const toast = document.getElementById('sahayakToast');
-
-    toast.classList.toggle('hidden');
-
+    toggleSahayakDrawer();
   }
 
 
@@ -792,78 +722,7 @@
 
 </script></main>
 
-      <div class="flex items-center gap-1">
-        <button onclick="toggleSahayakSpeech()" id="sahayak-tts-btn" class="p-2 text-on-primary/80 hover:text-white rounded-lg hover:bg-white/10" title="Toggle Voice Assistance">
-          <span class="material-symbols-outlined text-[20px]">volume_up</span>
-        </button>
-        <button onclick="toggleSahayakDrawer()" class="p-2 text-on-primary/80 hover:text-white rounded-lg hover:bg-white/10" title="Close">
-          <span class="material-symbols-outlined text-[20px]">close</span>
-        </button>
-      </div>
-    </div>
-    
-    <!-- Quick Navigation Shortcuts -->
-    <div class="p-3 bg-surface-container border-b border-outline-variant/50">
-      <div class="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant mb-2">Quick Navigation & Portals</div>
-      <div class="flex flex-wrap gap-1.5">
-        <a href="/apply" class="text-xs px-2.5 py-1 rounded-full bg-white text-primary font-medium hover:bg-primary hover:text-white border border-outline-variant transition-colors shadow-sm flex items-center gap-1">
-          <span class="material-symbols-outlined text-[14px]">school</span> Apply Portal
-        </a>
-        <a href="/officer" class="text-xs px-2.5 py-1 rounded-full bg-white text-primary font-medium hover:bg-primary hover:text-white border border-outline-variant transition-colors shadow-sm flex items-center gap-1">
-          <span class="material-symbols-outlined text-[14px]">gavel</span> Officer Desk
-        </a>
-        <a href="/track-cure" class="text-xs px-2.5 py-1 rounded-full bg-white text-primary font-medium hover:bg-primary hover:text-white border border-outline-variant transition-colors shadow-sm flex items-center gap-1">
-          <span class="material-symbols-outlined text-[14px]">healing</span> Track & Cure
-        </a>
-        <a href="/ledger" class="text-xs px-2.5 py-1 rounded-full bg-white text-primary font-medium hover:bg-primary hover:text-white border border-outline-variant transition-colors shadow-sm flex items-center gap-1">
-          <span class="material-symbols-outlined text-[14px]">account_balance</span> PFMS Ledger
-        </a>
-        <a href="/analytics" class="text-xs px-2.5 py-1 rounded-full bg-white text-primary font-medium hover:bg-primary hover:text-white border border-outline-variant transition-colors shadow-sm flex items-center gap-1">
-          <span class="material-symbols-outlined text-[14px]">insights</span> Analytics
-        </a>
-        <a href="/auth" class="text-xs px-2.5 py-1 rounded-full bg-white text-primary font-medium hover:bg-primary hover:text-white border border-outline-variant transition-colors shadow-sm flex items-center gap-1">
-          <span class="material-symbols-outlined text-[14px]">vpn_key</span> Sovereign SSO
-        </a>
-      </div>
-    </div>
 
-    <!-- Chat Messages Viewport -->
-    <div id="sahayak-chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3 bg-surface-container-lowest text-sm">
-      <div class="flex gap-2 items-start">
-        <div class="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-primary">
-          <span class="material-symbols-outlined text-[16px]">smart_toy</span>
-        </div>
-        <div class="bg-surface-container p-3 rounded-2xl rounded-tl-sm max-w-[85%] text-on-surface">
-          <p class="font-medium">Johar! I am MoTA Sahayak, your AI Assistant for Ministry of Tribal Affairs.</p>
-          <p class="mt-1 text-xs text-on-surface-variant">How may I assist you today? You can ask about Rule 14(b) name matching, curing faded seals, tracking your fellowship, or navigating the portals.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Suggested Query Chips -->
-    <div class="p-2 px-3 border-t border-outline-variant/40 bg-surface-container-low flex gap-1.5 overflow-x-auto text-xs whitespace-nowrap">
-      <button onclick="askSahayakQuick('What is Rule 14(b) phonetic protection?')" class="px-2.5 py-1 rounded bg-white hover:bg-primary hover:text-white border border-outline-variant transition-colors">
-        ⚖️ Rule 14(b) Guide
-      </button>
-      <button onclick="askSahayakQuick('How to cure a faded Tehsildar seal?')" class="px-2.5 py-1 rounded bg-white hover:bg-primary hover:text-white border border-outline-variant transition-colors">
-        📄 Fix Faded Seal
-      </button>
-      <button onclick="askSahayakQuick('Where can I track my fellowship status?')" class="px-2.5 py-1 rounded bg-white hover:bg-primary hover:text-white border border-outline-variant transition-colors">
-        🔍 Track Status
-      </button>
-    </div>
-
-    <!-- Chat Input Box -->
-    <div class="p-3 border-t border-outline-variant bg-surface flex items-center gap-2">
-      <input type="text" id="sahayak-input" placeholder="Ask in English, हिन्दी, संथाली, or गोंडी..." 
-        class="flex-1 px-3 py-2 text-sm rounded-lg border border-outline-variant focus:outline-none focus:border-primary bg-surface-container-lowest"
-        onkeydown="if(event.key==='Enter') sendSahayakMessage()"/>
-      <button onclick="sendSahayakMessage()" class="p-2 bg-primary text-on-primary rounded-lg hover:bg-primary-container transition-colors">
-        <span class="material-symbols-outlined text-[20px]">send</span>
-      </button>
-    </div>
-  </div>
-</div>
 
 
 
