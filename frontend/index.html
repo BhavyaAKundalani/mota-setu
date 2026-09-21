@@ -106,9 +106,9 @@
 
 <!-- Interactive Fast-Lookup / Application Bar -->
 
-<div class="relative w-full max-w-xl mt-2">
+<div class="relative w-full max-w-xl mt-2" id="search-container">
 
-<div class="bg-surface-container-lowest p-1.5 rounded-xl shadow-md flex items-center gap-2">
+<div class="bg-surface-container-lowest p-1.5 rounded-xl shadow-md flex items-center gap-2 border border-outline-variant/30">
 
 <span class="material-symbols-outlined text-outline pl-2 text-[22px]">search</span>
 
@@ -124,21 +124,31 @@
 
 </div>
 
-<!-- Fast Autocompletion Dropdown Preview -->
+<!-- Fast Autocompletion Dropdown Preview (Hidden by default, pops up on search interaction) -->
 
-<div class="absolute left-0 right-0 top-full mt-2 bg-surface-container-lowest rounded-xl shadow-xl overflow-hidden z-30 transition-all" id="search-preview-box">
+<div class="hidden absolute left-0 right-0 top-full mt-2 bg-surface-container-lowest rounded-xl shadow-2xl border border-outline-variant/50 overflow-hidden z-30 transition-all" id="search-preview-box">
 
 <div class="p-3 bg-surface-container text-on-surface font-label-sm text-label-sm flex items-center justify-between">
 
-<span class="uppercase tracking-wider">Suggested Applications &amp; Registries</span>
+<span class="uppercase tracking-wider font-semibold text-xs text-primary">Suggested Applications &amp; Registries</span>
 
-<span class="text-on-surface-variant">Live Search Index</span>
+<div class="flex items-center gap-2">
+
+<span class="text-on-surface-variant text-xs">Live Search Index</span>
+
+<button type="button" id="btn-close-search-preview" class="p-1 rounded-md text-outline hover:text-on-surface hover:bg-surface-container-high transition-colors flex items-center justify-center cursor-pointer" title="Close Suggestions (Esc)">
+
+<span class="material-symbols-outlined text-[16px]">close</span>
+
+</button>
 
 </div>
 
-<div class="divide-y-0 flex flex-col">
+</div>
 
-<a class="p-3.5 hover:bg-surface-container-low transition-colors flex items-center justify-between" href="#tribal-entry">
+<div class="divide-y-0 flex flex-col" id="search-results-list">
+
+<a class="p-3.5 hover:bg-surface-container-low transition-colors flex items-center justify-between search-item cursor-pointer" href="/track-cure" data-id="#MOTA-2025-JH-88391">
 
 <div class="flex items-center gap-3">
 
@@ -166,7 +176,7 @@
 
 </a>
 
-<a class="p-3.5 hover:bg-surface-container-low transition-colors flex items-center justify-between" href="#tribal-entry">
+<a class="p-3.5 hover:bg-surface-container-low transition-colors flex items-center justify-between search-item cursor-pointer" href="/track-cure" data-id="#MOTA-2025-OD-10492">
 
 <div class="flex items-center gap-3">
 
@@ -194,9 +204,11 @@
 
 </a>
 
-<div class="p-2.5 bg-surface-container-low text-center">
+<div class="p-2.5 bg-surface-container-low flex items-center justify-between px-4 text-on-surface-variant">
 
-<span class="font-label-sm text-label-sm text-on-surface-variant">Press <kbd class="px-1.5 py-0.5 bg-surface-container-lowest rounded shadow-xs text-primary font-mono">Enter</kbd> to inspect complete ledger record</span>
+<span class="font-label-sm text-label-sm">Press <kbd class="px-1.5 py-0.5 bg-surface-container-lowest rounded shadow-xs text-primary font-mono text-[11px]">Enter</kbd> to track record</span>
+
+<span class="font-label-sm text-label-sm text-outline">Press <kbd class="px-1.5 py-0.5 bg-surface-container-lowest rounded shadow-xs text-on-surface font-mono text-[11px]">Esc</kbd> to close</span>
 
 </div>
 
@@ -1190,71 +1202,101 @@
 <script>
 
   // Dynamic Autocompletion and Search Box Behavior
-
   (function() {
-
+    const searchContainer = document.getElementById('search-container');
     const searchInput = document.getElementById('search-input');
-
     const previewBox = document.getElementById('search-preview-box');
-
     const btnSearch = document.getElementById('btn-trigger-search');
-
-
+    const btnClosePreview = document.getElementById('btn-close-search-preview');
 
     if (searchInput && previewBox) {
+      // 1. Open preview when clicking or focusing the search input
+      searchInput.addEventListener('focus', () => {
+        previewBox.classList.remove('hidden');
+      });
 
+      searchInput.addEventListener('click', (e) => {
+        e.stopPropagation();
+        previewBox.classList.remove('hidden');
+      });
+
+      // 2. Open and live-filter when typing
       searchInput.addEventListener('input', (e) => {
-
+        previewBox.classList.remove('hidden');
         const val = e.target.value.trim().toLowerCase();
-
-        if (val.length > 0) {
-
-          previewBox.classList.remove('hidden');
-
-        } else {
-
-          previewBox.classList.remove('hidden'); // Keep visible for Prototype preview
-
-        }
-
-      });
-
-
-
-      // Quick keyboard shortcut "/" or Ctrl+K focus
-
-      window.addEventListener('keydown', (e) => {
-
-        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-
-          e.preventDefault();
-
-          searchInput.focus();
-
-        }
-
-      });
-
-
-
-      if (btnSearch) {
-
-        btnSearch.addEventListener('click', () => {
-
-          const val = searchInput.value.trim();
-
-          if (val) {
-
-            window.location.hash = '#schemes-quota';
-
-          }
-
+        const items = previewBox.querySelectorAll('.search-item');
+        items.forEach(item => {
+          const text = (item.textContent || '').toLowerCase();
+          const match = !val || text.includes(val);
+          item.style.display = match ? 'flex' : 'none';
         });
+      });
 
-      }
+      // 3. Close preview when clicking anywhere outside
+      document.addEventListener('click', (e) => {
+        if (searchContainer && !searchContainer.contains(e.target)) {
+          previewBox.classList.add('hidden');
+        }
+      });
 
+      // 4. Close preview when pressing Escape key
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' || e.key === 'Esc') {
+          previewBox.classList.add('hidden');
+          searchInput.blur();
+        }
+      });
+
+      // 5. Close preview with explicit close button [x]
+      btnClosePreview?.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        previewBox.classList.add('hidden');
+      });
+
+      // 6. When clicking a suggestion, populate search & close
+      previewBox.querySelectorAll('.search-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+          const id = item.getAttribute('data-id');
+          if (id) {
+            searchInput.value = id;
+          }
+          previewBox.classList.add('hidden');
+        });
+      });
+
+      // 7. Track search action on Enter or Track button
+      const executeSearch = () => {
+        previewBox.classList.add('hidden');
+        const val = searchInput.value.trim();
+        if (val) {
+          window.location.href = `/track-cure?ref=${encodeURIComponent(val)}`;
+        } else {
+          window.location.href = '/track-cure';
+        }
+      };
+
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          executeSearch();
+        }
+      });
+
+      btnSearch?.addEventListener('click', (e) => {
+        e.preventDefault();
+        executeSearch();
+      });
+
+      // Quick keyboard shortcut Ctrl+K
+      window.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+          e.preventDefault();
+          searchInput.focus();
+          previewBox.classList.remove('hidden');
+        }
+      });
     }
-
   })();
 
 </script></main>
