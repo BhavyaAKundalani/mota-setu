@@ -88,6 +88,59 @@ def init_db():
     );
     """)
     
+    # Users Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT UNIQUE NOT NULL,
+        mobile TEXT UNIQUE NOT NULL,
+        name TEXT NOT NULL,
+        password_hash TEXT NOT NULL,
+        salt TEXT NOT NULL,
+        role TEXT NOT NULL,
+        aadhaar_hash TEXT,
+        employee_id TEXT,
+        created_at TEXT NOT NULL
+    );
+    """)
+
+    # Submitted Applications Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS submitted_applications (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        ref_no TEXT UNIQUE NOT NULL,
+        scholar_name TEXT NOT NULL,
+        name_hindi TEXT,
+        aadhaar_hash TEXT NOT NULL,
+        caste_cert_no TEXT,
+        tribe TEXT NOT NULL,
+        district TEXT NOT NULL,
+        state TEXT NOT NULL,
+        issuing_authority TEXT NOT NULL,
+        institution TEXT NOT NULL,
+        course TEXT NOT NULL,
+        scheme TEXT NOT NULL,
+        annual_income INTEGER NOT NULL,
+        bank_name TEXT NOT NULL,
+        account_masked TEXT NOT NULL,
+        ifsc TEXT NOT NULL,
+        status TEXT NOT NULL,
+        created_at TEXT NOT NULL
+    );
+    """)
+
+    # Consent Log Table (DPDPA)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS consent_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        purpose TEXT NOT NULL,
+        ip_address TEXT,
+        timestamp TEXT NOT NULL
+    );
+    """)
+    
     conn.commit()
     seed_initial_records(conn)
     conn.close()
@@ -230,5 +283,39 @@ def seed_initial_records(conn):
     ('#MOTA-DBT-2025-11-04-09', 'MOTA-2025-RJ-77402', 'Ramesh Meena', 'NFST Fellowship', '•••• 5590', 'Canara Bank', '•••• 9901', 'CNRB0002100', 38800, 'Active / Seeded', NULL, '1c8477bae1100234', 'Ready for Disbursal', ?)
     """, (now, now, now, now, now))
     
+    # Seed Initial Users (Scholar & Officers)
+    cursor.execute("SELECT COUNT(*) as u_cnt FROM users")
+    if cursor.fetchone()["u_cnt"] == 0:
+        import uuid
+        salt_scholar = "salt_mangal_2025"
+        pwd_scholar = hashlib.sha256(f"tribal@123{salt_scholar}".encode()).hexdigest()
+        cursor.execute("""
+            INSERT INTO users (email, mobile, name, password_hash, salt, role, aadhaar_hash, employee_id, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            'mangal.soren@cuj.ac.in', '9876543210', 'Mangal Soren',
+            pwd_scholar, salt_scholar, 'SCHOLAR', '•••• 9104', None, now
+        ))
+        
+        salt_officer = "salt_mukherjee_2025"
+        pwd_officer = hashlib.sha256(f"officer@123{salt_officer}".encode()).hexdigest()
+        cursor.execute("""
+            INSERT INTO users (email, mobile, name, password_hash, salt, role, aadhaar_hash, employee_id, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            'r.mukherjee.tribal@gov.in', '9431109922', 'R. Mukherjee',
+            pwd_officer, salt_officer, 'OFFICER_L2', None, 'MOTA-DESK-2025-081', now
+        ))
+
+        salt_sno = "salt_sno_2025"
+        pwd_sno = hashlib.sha256(f"sno@123{salt_sno}".encode()).hexdigest()
+        cursor.execute("""
+            INSERT INTO users (email, mobile, name, password_hash, salt, role, aadhaar_hash, employee_id, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            'sno.jharkhand@nic.in', '9431109933', 'P. Tripathy',
+            pwd_sno, salt_sno, 'SNO', None, 'SNO-JH-2025', now
+        ))
+
     conn.commit()
-    print("Database seeded with statutory sample records successfully.")
+    print("Database seeded with statutory sample records and authorized users successfully.")
