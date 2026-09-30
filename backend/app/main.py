@@ -229,16 +229,21 @@ def login(req: LoginRequest):
         is_officer = ("@gov.in" in login_id) or ("@nic.in" in login_id) or (req.role and "OFFICER" in req.role.upper())
         role = req.role or ("OFFICER_L2" if is_officer else "SCHOLAR")
         name = "Authorized Scrutiny Officer" if is_officer else "Tribal Scholar"
-        user_email = login_id if "@" in login_id else f"{login_id.replace(' ', '').lower()}@mota.gov.in"
-        user_mobile = login_id if login_id.isdigit() and len(login_id) == 10 else "9876543210"
+        rand_suffix = uuid.uuid4().hex[:6]
+        user_email = login_id if "@" in login_id else f"{login_id.replace(' ', '').lower()}_{rand_suffix}@mota.gov.in"
+        user_mobile = login_id if login_id.isdigit() and len(login_id) == 10 else f"9{int(time.time()*1000) % 1000000000:09d}"
         
-        cursor.execute("""
-            INSERT INTO users (email, mobile, name, password_hash, salt, role, aadhaar_hash, employee_id, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (user_email, user_mobile, name, pwd_hash, salt, role, login_id if len(login_id) == 12 else "•••• 9104", login_id if "DESK" in login_id else None, now))
-        conn.commit()
-        cursor.execute("SELECT * FROM users WHERE id = ?", (cursor.lastrowid,))
-        user = cursor.fetchone()
+        try:
+            cursor.execute("""
+                INSERT INTO users (email, mobile, name, password_hash, salt, role, aadhaar_hash, employee_id, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (user_email, user_mobile, name, pwd_hash, salt, role, login_id if len(login_id) == 12 else "•••• 9104", login_id if "DESK" in login_id else None, now))
+            conn.commit()
+            cursor.execute("SELECT * FROM users WHERE id = ?", (cursor.lastrowid,))
+            user = cursor.fetchone()
+        except sqlite3.IntegrityError:
+            cursor.execute("SELECT * FROM users WHERE email = ? OR mobile = ?", (user_email, user_mobile))
+            user = cursor.fetchone()
 
     conn.close()
     

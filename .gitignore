@@ -18,5 +18,5 @@ backend/*.db
 # OS & Editor generated
 .DS_Store
 Thumbs.db
-.vscode/
-.idea/
+# Scratch and test files
+scratch/
