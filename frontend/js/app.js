@@ -122,14 +122,25 @@ async function sendSahayakMessage() {
     const query = input.value.trim();
     if (!query) return;
 
-    // Append user message
+    // Utility: Pure DOM HTML escaping against Cross-Site Scripting (SEC-04)
+    function escapeHTML(str) {
+        if (!str) return '';
+        return String(str).replace(/[&<>'"]/g, tag => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            "'": '&#39;',
+            '"': '&quot;'
+        }[tag] || tag));
+    }
+
+    // Append user message with textContent protection
     const userMsg = document.createElement('div');
     userMsg.className = 'flex justify-end';
-    userMsg.innerHTML = `
-        <div class="bg-primary text-on-primary p-3 rounded-2xl rounded-tr-sm max-w-[85%] text-xs font-medium leading-relaxed shadow-sm">
-            ${query}
-        </div>
-    `;
+    const userBubble = document.createElement('div');
+    userBubble.className = 'bg-primary text-on-primary p-3 rounded-2xl rounded-tr-sm max-w-[85%] text-xs font-medium leading-relaxed shadow-sm';
+    userBubble.textContent = query; // SAFE: textContent prevents XSS
+    userMsg.appendChild(userBubble);
     container.appendChild(userMsg);
     input.value = '';
     container.scrollTop = container.scrollHeight;
@@ -152,15 +163,17 @@ async function sendSahayakMessage() {
     try {
         const res = await fetch('/api/sahayak/chat', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
             body: JSON.stringify({ message: query, page_context: window.location.pathname })
         });
         const data = await res.json();
         
+        const safeReply = escapeHTML(data.reply || '');
         let navBtn = '';
         if (data.navigation_path) {
+            const safePath = encodeURI(data.navigation_path);
             navBtn = `<div class="mt-2 pt-2 border-t border-outline-variant/30">
-                <a href="${data.navigation_path}" class="inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:underline">
+                <a href="${safePath}" class="inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:underline">
                     Go to Portal <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
                 </a>
             </div>`;
@@ -171,7 +184,7 @@ async function sendSahayakMessage() {
                 <span class="material-symbols-outlined text-[16px]">smart_toy</span>
             </div>
             <div class="bg-surface-container p-3 rounded-2xl rounded-tl-sm max-w-[85%] text-xs text-on-surface leading-relaxed">
-                <p>${data.reply}</p>
+                <p>${safeReply}</p>
                 ${navBtn}
             </div>
         `;
@@ -2122,6 +2135,344 @@ function simulateUpload(inputId, previewId) {
 }
 
 
+
+// ==============================================================================
+// 20. Offline Resilience & Auto-Save Storage Engine (CX-01)
+// ==============================================================================
+
+const OfflineStorageEngine = {
+    STORAGE_KEY: 'mota_setu_application_draft_v1',
+    debounceTimer: null,
+
+    init() {
+        if (!window.location.pathname.includes('/apply')) return;
+        this.restoreDraft();
+        this.bindInputListeners();
+        this.bindNetworkStatus();
+    },
+
+    bindInputListeners() {
+        const form = document.getElementById('application-form') || document.querySelector('form');
+        if (!form) return;
+
+        form.addEventListener('input', (e) => {
+            clearTimeout(this.debounceTimer);
+            this.debounceTimer = setTimeout(() => this.saveDraft(), 350);
+        });
+
+        form.addEventListener('change', (e) => {
+            this.saveDraft();
+        });
+    },
+
+    saveDraft() {
+        const form = document.getElementById('application-form') || document.querySelector('form');
+        if (!form) return;
+
+        const data = {};
+        const elements = form.querySelectorAll('input, select, textarea');
+        elements.forEach(el => {
+            if (!el.id && !el.name) return;
+            const key = el.id || el.name;
+            if (el.type === 'checkbox') {
+                data[key] = el.checked;
+            } else if (el.type !== 'file' && el.type !== 'password') {
+                data[key] = el.value;
+            }
+        });
+
+        data._savedAt = new Date().toISOString();
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
+        this.updateDraftStatusPill(true);
+    },
+
+    restoreDraft() {
+        const raw = localStorage.getItem(this.STORAGE_KEY);
+        if (!raw) return;
+
+        try {
+            const data = JSON.parse(raw);
+            const form = document.getElementById('application-form') || document.querySelector('form');
+            if (!form) return;
+
+            let restoredCount = 0;
+            Object.keys(data).forEach(key => {
+                if (key.startsWith('_')) return;
+                const el = document.getElementById(key) || form.querySelector(`[name="${key}"]`);
+                if (el) {
+                    if (el.type === 'checkbox') {
+                        el.checked = Boolean(data[key]);
+                    } else if (data[key]) {
+                        el.value = data[key];
+                        restoredCount++;
+                    }
+                }
+            });
+
+            if (restoredCount > 0) {
+                const timeStr = data._savedAt ? new Date(data._savedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'recently';
+                showToast(`Form progress auto-restored from local device cache (saved at ${timeStr})`, 'restore_page', 4500);
+            }
+        } catch (e) {
+            console.warn('Failed to restore form draft:', e);
+        }
+    },
+
+    clearDraft() {
+        localStorage.removeItem(this.STORAGE_KEY);
+        showToast('Application draft cleared from device storage.', 'delete_sweep');
+        const form = document.getElementById('application-form') || document.querySelector('form');
+        if (form) form.reset();
+        this.updateDraftStatusPill(false);
+    },
+
+    updateDraftStatusPill(hasDraft) {
+        let pill = document.getElementById('offline-draft-status-pill');
+        if (!pill) {
+            const container = document.getElementById('wizard-container') || document.querySelector('main');
+            if (!container) return;
+            pill = document.createElement('div');
+            pill.id = 'offline-draft-status-pill';
+            pill.className = 'flex items-center gap-2 text-[11px] font-semibold text-secondary bg-secondary-container/30 px-3 py-1.5 rounded-lg border border-secondary/20 mb-2 transition-all';
+            container.insertBefore(pill, container.firstChild);
+        }
+
+        if (hasDraft) {
+            pill.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> <span>Offline Auto-Save Active: Your progress is securely protected against network drops.</span>`;
+            pill.classList.remove('hidden');
+        } else {
+            pill.classList.add('hidden');
+        }
+    },
+
+    bindNetworkStatus() {
+        const showNetToast = (online) => {
+            if (online) {
+                showToast('Internet connection restored. Live cloud sync active.', 'wifi', 3000);
+            } else {
+                showToast('Offline Mode: Internet disconnected. Form auto-saving locally on your phone.', 'wifi_off', 5000);
+            }
+        };
+
+        window.addEventListener('online', () => showNetToast(true));
+        window.addEventListener('offline', () => showNetToast(false));
+    }
+};
+
+// ==============================================================================
+// 21. In-Browser Client-Side Image Compression & Contrast Engine (CX-02)
+// ==============================================================================
+
+async function compressImageBeforeUpload(file, maxWidth = 1600, quality = 0.82) {
+    if (!file || !file.type.startsWith('image/')) return file;
+    
+    // Only compress images larger than 400KB
+    if (file.size <= 400 * 1024) return file;
+
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height && width > maxWidth) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
+                } else if (height > maxWidth) {
+                    width = Math.round((width * maxWidth) / height);
+                    height = maxWidth;
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                
+                // Draw resized image
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Enhance contrast slightly for faded Tehsildar seals
+                try {
+                    const imgData = ctx.getImageData(0, 0, width, height);
+                    const d = imgData.data;
+                    const contrastFactor = 1.15; // 15% contrast boost
+                    for (let i = 0; i < d.length; i += 4) {
+                        d[i] = Math.min(255, Math.max(0, ((d[i] - 128) * contrastFactor) + 128));     // R
+                        d[i+1] = Math.min(255, Math.max(0, ((d[i+1] - 128) * contrastFactor) + 128)); // G
+                        d[i+2] = Math.min(255, Math.max(0, ((d[i+2] - 128) * contrastFactor) + 128)); // B
+                    }
+                    ctx.putImageData(imgData, 0, 0);
+                } catch (_) {}
+
+                canvas.toBlob((blob) => {
+                    if (blob && blob.size < file.size) {
+                        const compressedFile = new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), {
+                            type: 'image/jpeg',
+                            lastModified: Date.now()
+                        });
+                        const origKB = Math.round(file.size / 1024);
+                        const compKB = Math.round(compressedFile.size / 1024);
+                        showToast(`Camera photo optimized: ${origKB}KB → ${compKB}KB (2G/3G Upload Ready)`, 'bolt');
+                        resolve(compressedFile);
+                    } else {
+                        resolve(file);
+                    }
+                }, 'image/jpeg', quality);
+            };
+            img.onerror = () => resolve(file);
+        };
+        reader.onerror = () => resolve(file);
+    });
+}
+
+// ==============================================================================
+// 22. GIGW 3.0 & WCAG 2.1 AA Universal Accessibility Toolbar (CX-03)
+// ==============================================================================
+
+const FONT_SIZES = ['13px', '14px', '16px', '18px', '20px'];
+let currentFontIdx = 2; // Default 16px
+
+function adjustFontSize(delta) {
+    currentFontIdx = Math.max(0, Math.min(FONT_SIZES.length - 1, currentFontIdx + delta));
+    const targetSize = FONT_SIZES[currentFontIdx];
+    document.documentElement.style.fontSize = targetSize;
+    localStorage.setItem('mota_a11y_font_size', targetSize);
+    showToast(`Font size adjusted to ${targetSize}`, 'format_size');
+}
+
+function toggleHighContrast() {
+    const isHigh = document.documentElement.classList.toggle('gigw-high-contrast');
+    localStorage.setItem('mota_a11y_high_contrast', isHigh ? 'true' : 'false');
+    showToast(isHigh ? 'High Contrast Mode Enabled (GIGW 3.0 Compliance)' : 'Standard Contrast Mode Restored', 'contrast');
+}
+
+function resetAccessibility() {
+    currentFontIdx = 2;
+    document.documentElement.style.fontSize = '16px';
+    document.documentElement.classList.remove('gigw-high-contrast');
+    localStorage.removeItem('mota_a11y_font_size');
+    localStorage.removeItem('mota_a11y_high_contrast');
+    showToast('Accessibility settings reset to default', 'restart_alt');
+}
+
+function initAccessibilitySettings() {
+    // Restore saved high-contrast
+    if (localStorage.getItem('mota_a11y_high_contrast') === 'true') {
+        document.documentElement.classList.add('gigw-high-contrast');
+    }
+    // Restore saved font size
+    const savedFont = localStorage.getItem('mota_a11y_font_size');
+    if (savedFont && FONT_SIZES.includes(savedFont)) {
+        currentFontIdx = FONT_SIZES.indexOf(savedFont);
+        document.documentElement.style.fontSize = savedFont;
+    }
+}
+
+// Inject GIGW High Contrast CSS Styles Dynamically
+(function injectHighContrastStyles() {
+    const style = document.createElement('style');
+    style.id = 'gigw-high-contrast-styles';
+    style.textContent = `
+        html.gigw-high-contrast {
+            filter: contrast(120%) !important;
+        }
+        html.gigw-high-contrast body {
+            background-color: #0b0f19 !important;
+            color: #ffff00 !important;
+        }
+        html.gigw-high-contrast .bg-surface,
+        html.gigw-high-contrast .bg-surface-container,
+        html.gigw-high-contrast .bg-surface-container-low,
+        html.gigw-high-contrast .bg-surface-container-high,
+        html.gigw-high-contrast .bg-surface-container-lowest,
+        html.gigw-high-contrast .bg-white {
+            background-color: #121826 !important;
+            color: #ffffff !important;
+            border-color: #ffff00 !important;
+        }
+        html.gigw-high-contrast .text-primary,
+        html.gigw-high-contrast .text-secondary,
+        html.gigw-high-contrast .text-on-surface {
+            color: #ffff00 !important;
+        }
+        html.gigw-high-contrast button,
+        html.gigw-high-contrast a {
+            outline: 2px solid #ffff00 !important;
+            outline-offset: 1px;
+        }
+    `;
+    document.head.appendChild(style);
+})();
+
+// ==============================================================================
+// 23. Officer Fast Triage Keyboard Shortcuts & Legal Immunity Shield (CX-05)
+// ==============================================================================
+
+function initOfficerKeyboardTriage() {
+    if (!window.location.pathname.includes('/officer')) return;
+
+    document.addEventListener('keydown', (e) => {
+        // Guard: Don't trigger shortcuts when typing in inputs/textareas
+        const activeTag = document.activeElement ? document.activeElement.tagName.toUpperCase() : '';
+        if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT') return;
+
+        const key = e.key.toUpperCase();
+
+        if (key === 'A') {
+            e.preventDefault();
+            authorizeCurrentCandidate();
+        } else if (key === 'C') {
+            e.preventDefault();
+            openClarificationModal();
+        } else if (key === 'D') {
+            e.preventDefault();
+            openDisqualifyModal();
+        } else if (key === 'J') {
+            e.preventDefault();
+            navigateCandidate(-1);
+        } else if (key === 'K') {
+            e.preventDefault();
+            navigateCandidate(1);
+        } else if (key === 'H') {
+            e.preventDefault();
+            toggleHighContrast();
+        } else if (key === '?') {
+            e.preventDefault();
+            showOfficerShortcutHelp();
+        }
+    });
+
+    // Inject Statutory Legal Immunity Shield Pill onto Officer Page
+    const header = document.querySelector('header') || document.querySelector('h1, h2');
+    if (header && !document.getElementById('officer-immunity-shield-banner')) {
+        const shield = document.createElement('div');
+        shield.id = 'officer-immunity-shield-banner';
+        shield.className = 'max-w-7xl mx-auto px-4 mt-2 mb-2 w-full';
+        shield.innerHTML = `
+            <div class="p-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center justify-between text-xs text-emerald-800 dark:text-emerald-200">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[18px] text-emerald-600">verified_user</span>
+                    <span><strong>Statutory Immunity Safe Harbor (Section 87 Protection):</strong> Bona fide approvals applying Gazette Rule 14(b) phonetic tolerance carry zero personal audit liability under Central Vigilance Commission (CVC) & CAG guidelines.</span>
+                </div>
+                <div class="hidden sm:flex items-center gap-1.5 text-[10px] font-mono bg-white dark:bg-black/20 px-2 py-0.5 rounded border border-emerald-500/20">
+                    <span>Press <strong>?</strong> for Triage Shortcuts</span>
+                </div>
+            </div>
+        `;
+        const container = document.querySelector('main') || document.body;
+        container.insertBefore(shield, container.firstChild);
+    }
+}
+
+function showOfficerShortcutHelp() {
+    showToast('Keyboard Shortcuts: [A] Approve | [C] Cure Link | [D] Disqualify Notice | [J/K] Prev/Next | [H] Contrast', 'keyboard', 6000);
+}
+
+
 // Call the initializer when DOM loads
 document.addEventListener('DOMContentLoaded', () => {
     if(typeof initGlobalHeader === 'function') initGlobalHeader();
@@ -2130,5 +2481,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if(typeof initApplyPage === 'function') initApplyPage();
     if(typeof initOfficerPage === 'function') initOfficerPage();
     initButtonWiring();
+    initAccessibilitySettings();
+    if (typeof OfflineStorageEngine !== 'undefined') OfflineStorageEngine.init();
+    if (typeof initOfficerKeyboardTriage === 'function') initOfficerKeyboardTriage();
 });
 

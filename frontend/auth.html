@@ -61,6 +61,12 @@
         <span class="hidden md:inline text-teal-200">Sovereign Digital Identity Gateway (Rule 14b & GFR Compliant)</span>
       </div>
       <div class="flex items-center gap-3">
+        <div class="hidden sm:flex items-center gap-1 bg-primary-container px-2 py-0.5 rounded font-label-sm text-label-sm">
+          <button onclick="adjustFontSize(-1)" class="hover:text-primary-fixed transition-colors font-label-sm text-label-sm btn-ripple" title="Decrease text size" type="button">A-</button>
+          <button onclick="resetAccessibility()" class="hover:text-primary-fixed transition-colors font-label-sm text-label-sm btn-ripple" title="Default text size" type="button">A</button>
+          <button onclick="adjustFontSize(1)" class="hover:text-primary-fixed transition-colors font-label-sm text-label-sm btn-ripple" title="Increase text size" type="button">A+</button>
+          <button onclick="toggleHighContrast()" class="hover:text-primary-fixed transition-colors font-label-sm text-label-sm btn-ripple px-1 ml-0.5" title="Toggle High Contrast (GIGW 3.0)" type="button"><span class="material-symbols-outlined text-[13px]">contrast</span></button>
+        </div>
         <a href="/" class="hover:text-teal-200 transition-colors flex items-center gap-1">
           <span class="material-symbols-outlined text-[14px]">home</span> Portal Gateway
         </a>
